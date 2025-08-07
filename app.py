@@ -225,7 +225,7 @@ def schedule_page():
 
 @app.route('/schedule-plan', methods=['POST'])
 def schedule_plan():
-    """Schedule the wellness plan on calendar."""
+    """Schedule the wellness plan on calendar with conflict detection."""
     try:
         plan = plan_generator.load_plan()
         if not plan:
@@ -234,18 +234,42 @@ def schedule_plan():
         start_date_str = request.form.get('start_date')
         start_date = datetime.fromisoformat(start_date_str) if start_date_str else datetime.now() + timedelta(days=1)
         
+        # Get preferred times from form
+        preferred_times = [(6, 9), (18, 21)]  # Default
+        morning_slot = request.form.get('morning_slot')
+        evening_slot = request.form.get('evening_slot')
+        
+        if morning_slot:
+            try:
+                start_h, end_h = map(int, morning_slot.split('-'))
+                preferred_times[0] = (start_h, end_h)
+            except ValueError:
+                pass
+        
+        if evening_slot:
+            try:
+                start_h, end_h = map(int, evening_slot.split('-'))
+                preferred_times[1] = (start_h, end_h)
+            except ValueError:
+                pass
+        
         # Ensure calendar is authenticated
         print("🗓️  Authenticating with Google Calendar...")
         if not calendar_integration.authenticate():
             return jsonify({'error': 'Failed to authenticate with Google Calendar'}), 500
         
-        # Schedule the plan
-        print(f"📅 Scheduling {len(plan.get('days', []))} days of activities...")
-        result = calendar_integration.schedule_wellness_plan(plan, start_date)
+        # Schedule the plan with conflict detection
+        print(f"📅 Scheduling {len(plan.get('days', []))} days of activities with conflict detection...")
+        result = calendar_integration.schedule_wellness_plan(plan, start_date, preferred_times)
+        
+        # Provide detailed feedback about conflicts
+        message = f'Scheduled {result["scheduled_count"]} activities'
+        if result["failed_count"] > 0:
+            message += f', {result["failed_count"]} failed due to conflicts'
         
         return jsonify({
             'success': True,
-            'message': f'Scheduled {result["scheduled_count"]} activities',
+            'message': message,
             'result': result
         })
         
@@ -691,6 +715,78 @@ def reset_calendar_auth():
             return jsonify({'success': False, 'message': 'Failed to clear authentication'})
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {e}'})
+
+@app.route('/api/calendar-conflicts', methods=['POST'])
+def api_calendar_conflicts():
+    """Check for calendar conflicts before scheduling."""
+    try:
+        data = request.get_json()
+        start_date_str = data.get('start_date')
+        if not start_date_str:
+            return jsonify({'error': 'start_date is required'}), 400
+        
+        start_date = datetime.fromisoformat(start_date_str)
+        plan = plan_generator.load_plan()
+        
+        if not plan:
+            return jsonify({'error': 'No wellness plan found'}), 400
+        
+        # Check for conflicts without actually scheduling
+        calendar_integration.authenticate()
+        end_date = start_date + timedelta(days=14)
+        existing_events = calendar_integration._get_existing_wellness_events(start_date, end_date)
+        busy_times = calendar_integration.get_busy_times(start_date, end_date)
+        
+        return jsonify({
+            'success': True,
+            'existing_wellness_events': len(existing_events),
+            'busy_time_slots': len(busy_times),
+            'conflicts_detected': len(existing_events) > 0,
+            'preview_message': f'Found {len(existing_events)} existing wellness events and {len(busy_times)} busy time slots'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-wellness-events', methods=['POST'])
+def api_delete_wellness_events():
+    """Delete existing wellness events from calendar."""
+    try:
+        data = request.get_json()
+        days_back = data.get('days_back', 7)
+        days_forward = data.get('days_forward', 14)
+        
+        if not calendar_integration.authenticate():
+            return jsonify({'error': 'Calendar authentication failed'}), 500
+        
+        # Get existing wellness events
+        start_date = datetime.now() - timedelta(days=days_back)
+        end_date = datetime.now() + timedelta(days=days_forward)
+        existing_events = calendar_integration._get_existing_wellness_events(start_date, end_date)
+        
+        deleted_count = 0
+        failed_count = 0
+        
+        for event in existing_events:
+            try:
+                calendar_integration.service.events().delete(
+                    calendarId='primary', 
+                    eventId=event['event_id']
+                ).execute()
+                deleted_count += 1
+            except Exception as e:
+                print(f"Failed to delete event {event['event_id']}: {e}")
+                failed_count += 1
+        
+        return jsonify({
+            'success': True,
+            'message': f'Deleted {deleted_count} wellness events, {failed_count} failed',
+            'deleted_count': deleted_count,
+            'failed_count': failed_count
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/favicon.ico')
 def favicon():

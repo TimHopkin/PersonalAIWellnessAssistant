@@ -1,0 +1,42 @@
+{
+  "generated_at": "2025-08-07T14:03:07.502441",
+  "health": {
+    "timestamp": "2025-08-07T14:03:06.713631",
+    "authentication_status": "success",
+    "service_available": true,
+    "upcoming_events_count": 0,
+    "conflicts_detected": 0,
+    "errors": [],
+    "api_test": "success",
+    "conflicts": []
+  },
+  "sync_validation": {
+    "timestamp": "2025-08-07T14:03:07.434132",
+    "app_events_count": 13,
+    "calendar_events_count": 0,
+    "sync_status": "out_of_sync",
+    "mismatches": [
+      "Count mismatch: App has 13, Calendar has 0"
+    ]
+  },
+  "scheduling_analysis": {
+    "timestamp": "2025-08-07T14:03:07.502135",
+    "total_attempts": 13,
+    "success_rate": 100.0,
+    "common_failure_reasons": [],
+    "time_slot_distribution": {
+      "Morning": 3,
+      "Evening": 10
+    },
+    "activity_type_distribution": {
+      "walking": 2,
+      "breathing_exercise": 7,
+      "stretching": 2,
+      "bodyweight_exercises": 1,
+      "yoga": 1
+    }
+  },
+  "recommendations": [
+    "Synchronize app data with calendar events"
+  ]
+}

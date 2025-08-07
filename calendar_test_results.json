@@ -1,0 +1,206 @@
+{
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "success_rate": 100.0,
+    "run_at": "2025-08-07T14:03:57.243944",
+    "test_mode": "demo_mode"
+  },
+  "detailed_results": [
+    {
+      "test": "Calendar Authentication",
+      "success": true,
+      "message": "Connected to Google Calendar",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.230086"
+    },
+    {
+      "test": "Calendar Service Available",
+      "success": true,
+      "message": "Service initialized",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.230097"
+    },
+    {
+      "test": "Credentials File",
+      "success": true,
+      "message": "Credentials at: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/calendar_test_vecsq6f3/credentials.json",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.230103"
+    },
+    {
+      "test": "Free Slot Detection",
+      "success": true,
+      "message": "Found 179 free 30-minute slots in 3 days",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.230374"
+    },
+    {
+      "test": "Time Preference Filtering",
+      "success": true,
+      "message": "Morning: 41 slots, Evening: 45 slots",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.230505"
+    },
+    {
+      "test": "Duration Scaling",
+      "success": true,
+      "message": "15min: 184, 30min: 179, 60min: 169",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231128"
+    },
+    {
+      "test": "Single Activity Scheduling",
+      "success": true,
+      "message": "Event ID: demo_eve...",
+      "details": {
+        "event_id": "demo_event_test_run_1754632800",
+        "start_time": "2025-08-08T07:00:00"
+      },
+      "timestamp": "2025-08-07T14:03:57.231154"
+    },
+    {
+      "test": "Wellness Plan Scheduling",
+      "success": true,
+      "message": "Scheduled: 5/5, Failed: 0",
+      "details": {
+        "result": {
+          "scheduled_count": 5,
+          "failed_count": 0,
+          "scheduled_activities": [
+            {
+              "activity": {
+                "type": "running",
+                "category": "cardio",
+                "duration_minutes": 30,
+                "intensity": "moderate",
+                "details": "30-minute morning run",
+                "best_time": "morning"
+              },
+              "scheduled_time": "2025-08-08T06:00:00",
+              "event_id": "demo_event_running_1754629200",
+              "day": 1
+            },
+            {
+              "activity": {
+                "type": "yoga",
+                "category": "flexibility",
+                "duration_minutes": 20,
+                "intensity": "low",
+                "details": "Evening yoga session",
+                "best_time": "evening"
+              },
+              "scheduled_time": "2025-08-08T18:00:00",
+              "event_id": "demo_event_yoga_1754672400",
+              "day": 1
+            },
+            {
+              "activity": {
+                "type": "strength_training",
+                "category": "strength",
+                "duration_minutes": 45,
+                "intensity": "high",
+                "details": "Full body strength workout",
+                "best_time": "afternoon"
+              },
+              "scheduled_time": "2025-08-09T06:00:00",
+              "event_id": "demo_event_strength_training_1754715600",
+              "day": 2
+            },
+            {
+              "activity": {
+                "type": "meditation",
+                "category": "wellbeing",
+                "duration_minutes": 15,
+                "intensity": "low",
+                "details": "Mindfulness meditation",
+                "best_time": "evening"
+              },
+              "scheduled_time": "2025-08-09T18:00:00",
+              "event_id": "demo_event_meditation_1754758800",
+              "day": 2
+            },
+            {
+              "activity": {
+                "type": "cycling",
+                "category": "cardio",
+                "duration_minutes": 40,
+                "intensity": "moderate",
+                "details": "Outdoor cycling session",
+                "best_time": "morning"
+              },
+              "scheduled_time": "2025-08-10T06:00:00",
+              "event_id": "demo_event_cycling_1754802000",
+              "day": 3
+            }
+          ],
+          "failed_activities": [],
+          "start_date": "2025-08-08T14:03:57.231158"
+        }
+      },
+      "timestamp": "2025-08-07T14:03:57.231747"
+    },
+    {
+      "test": "Conflict Detection",
+      "success": true,
+      "message": "No conflicts detected",
+      "details": {
+        "conflicts": []
+      },
+      "timestamp": "2025-08-07T14:03:57.231765"
+    },
+    {
+      "test": "Upcoming Activities Retrieval",
+      "success": true,
+      "message": "Retrieved 2 upcoming activities",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231771"
+    },
+    {
+      "test": "Activity Data Structure",
+      "success": true,
+      "message": "First activity has required fields: ['summary', 'start_time', 'description', 'event_id']",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231776"
+    },
+    {
+      "test": "Timezone Handling",
+      "success": true,
+      "message": "Scheduled with local time, Event: demo_eve...",
+      "details": {
+        "local_time": "2025-08-07T14:03:57.231920",
+        "utc_time": "2025-08-07T13:03:57.231778+00:00"
+      },
+      "timestamp": "2025-08-07T14:03:57.231926"
+    },
+    {
+      "test": "Error Handling",
+      "success": true,
+      "message": "Invalid activity handled gracefully, result: demo_event_invalid_test_1754485437",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231931"
+    },
+    {
+      "test": "Future Date Handling",
+      "success": true,
+      "message": "Far future date handled: demo_event_future_test_1786107837",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231934"
+    },
+    {
+      "test": "Calendar Data Sync",
+      "success": true,
+      "message": "Skipped in demo mode",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.231936"
+    },
+    {
+      "test": "Large Plan Performance",
+      "success": true,
+      "message": "Scheduled 42/42 activities in 0.01s",
+      "details": {},
+      "timestamp": "2025-08-07T14:03:57.243662"
+    }
+  ]
+}
