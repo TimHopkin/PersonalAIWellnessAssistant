@@ -380,44 +380,215 @@ window.WellnessApp = {
     // Chat functionality
     initChatFunctionality: function() {
         try {
+            console.log('🔧 Initializing chat functionality...');
             this.currentChatSession = null;
+            this.chatConnected = false;
             
             const chatForm = document.getElementById('chatForm');
             const chatInput = document.getElementById('chatInput');
             const chatMessages = document.getElementById('chatMessages');
             const sendBtn = document.getElementById('sendBtn');
+            const charCount = document.getElementById('charCount');
+            const inputStatus = document.getElementById('inputStatus');
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            console.log('🔍 Chat elements found:', {
+                chatForm: !!chatForm,
+                chatInput: !!chatInput,
+                chatMessages: !!chatMessages,
+                sendBtn: !!sendBtn,
+                charCount: !!charCount,
+                inputStatus: !!inputStatus,
+                connectionStatus: !!connectionStatus
+            });
             
             if (chatForm && chatInput && chatMessages && sendBtn) {
+                // Initialize UI state
+                this.updateConnectionStatus(true);
+                this.updateInputStatus('Ready to send');
+                
+                // Character counter
+                if (charCount) {
+                    chatInput.addEventListener('input', () => {
+                        const length = chatInput.value.length;
+                        charCount.textContent = length;
+                        
+                        if (length > 800) {
+                            charCount.className = 'text-warning';
+                        } else if (length > 950) {
+                            charCount.className = 'text-danger';
+                        } else {
+                            charCount.className = 'text-muted';
+                        }
+                        
+                        // Enable/disable send button based on input
+                        sendBtn.disabled = length === 0 || length > 1000;
+                        this.updateInputStatus(length === 0 ? 'Type a message...' : 
+                                            length > 1000 ? 'Message too long' : 'Ready to send');
+                    });
+                }
+                
+                // Form submission
                 chatForm.addEventListener('submit', (e) => {
+                    console.log('📝 Chat form submit event triggered');
                     e.preventDefault();
+                    e.stopPropagation();
                     
                     try {
                         const message = chatInput.value.trim();
-                        if (!message) return;
+                        console.log('💬 Chat message:', message);
+                        
+                        if (!message) {
+                            console.log('❌ Empty message, skipping');
+                            this.updateInputStatus('Type a message...');
+                            return;
+                        }
+                        
+                        if (message.length > 1000) {
+                            console.log('❌ Message too long');
+                            this.updateInputStatus('Message too long');
+                            this.showToast('Message must be 1000 characters or less', 'warning');
+                            return;
+                        }
+                        
+                        // Prevent multiple submissions
+                        if (sendBtn.disabled && sendBtn.innerHTML.includes('spinner')) {
+                            console.log('🚫 Already sending message, preventing duplicate submission');
+                            return;
+                        }
                         
                         // Add user message to chat
+                        console.log('➕ Adding user message to chat');
                         this.addUserMessage(message);
                         
-                        // Clear input and disable send button
+                        // Clear input and update UI
                         chatInput.value = '';
-                        sendBtn.disabled = true;
-                        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        if (charCount) charCount.textContent = '0';
+                        this.setSendingState(true);
+                        console.log('🔄 UI updated, sending message to AI...');
                         
                         // Send message to AI
                         this.sendChatMessage(message);
                     } catch (error) {
-                        console.error('Error handling chat form submit:', error);
-                        this.showToast('Error sending message. Please try again.', 'error');
+                        console.error('❌ Error handling chat form submit:', error);
+                        this.showToast('Error sending message: ' + error.message, 'error');
+                        this.setSendingState(false);
                     }
                 });
                 
-                console.log('Chat functionality initialized');
+                // Prevent form from closing modal on enter
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('⌨️ Enter key pressed, triggering form submit');
+                        if (!sendBtn.disabled) {
+                            chatForm.dispatchEvent(new Event('submit'));
+                        }
+                    }
+                });
+                
+                // Focus input when modal opens
+                const chatModal = document.getElementById('chatModal');
+                if (chatModal) {
+                    chatModal.addEventListener('shown.bs.modal', () => {
+                        chatInput.focus();
+                        this.updateConnectionStatus(true);
+                    });
+                }
+                
+                console.log('✅ Chat functionality initialized successfully');
             } else {
-                console.log('Chat elements not found on this page');
+                console.log('❌ Chat elements not found on this page');
             }
         } catch (error) {
-            console.error('Error initializing chat functionality:', error);
+            console.error('❌ Error initializing chat functionality:', error);
+            this.showToast('Failed to initialize chat functionality', 'error');
         }
+    },
+    
+    updateConnectionStatus: function(connected) {
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionAlert = document.getElementById('connectionAlert');
+        const connectionMessage = document.getElementById('connectionMessage');
+        
+        this.chatConnected = connected;
+        
+        if (connectionStatus) {
+            if (connected) {
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'badge bg-success ms-2';
+            } else {
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'badge bg-danger ms-2';
+            }
+        }
+        
+        if (connectionAlert) {
+            if (connected) {
+                connectionAlert.classList.add('d-none');
+            } else {
+                connectionAlert.classList.remove('d-none');
+                if (connectionMessage) {
+                    connectionMessage.textContent = 'Unable to connect to the AI service. Please check your internet connection.';
+                }
+            }
+        }
+    },
+    
+    updateInputStatus: function(status) {
+        const inputStatus = document.getElementById('inputStatus');
+        if (inputStatus) {
+            inputStatus.textContent = status;
+        }
+    },
+    
+    setSendingState: function(sending) {
+        const sendBtn = document.getElementById('sendBtn');
+        const chatInput = document.getElementById('chatInput');
+        const closeBtn = document.getElementById('closeBtn');
+        
+        if (sendBtn) {
+            if (sending) {
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.updateInputStatus('Sending message...');
+            } else {
+                sendBtn.disabled = chatInput && chatInput.value.trim().length === 0;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                this.updateInputStatus('Ready to send');
+            }
+        }
+        
+        if (chatInput) {
+            chatInput.disabled = sending;
+        }
+        
+        if (closeBtn) {
+            closeBtn.disabled = sending;
+        }
+    },
+    
+    retryConnection: function() {
+        console.log('🔄 Retrying connection...');
+        this.updateConnectionStatus(true);
+        this.showToast('Retrying connection...', 'info');
+        
+        // Try a simple ping to test connectivity
+        fetch('/api/chat-sessions', { method: 'GET' })
+            .then(response => {
+                if (response.ok) {
+                    this.updateConnectionStatus(true);
+                    this.showToast('Connection restored!', 'success');
+                } else {
+                    throw new Error('Server responded with error');
+                }
+            })
+            .catch(error => {
+                console.error('Connection test failed:', error);
+                this.updateConnectionStatus(false);
+                this.showToast('Connection test failed. Please try again.', 'error');
+            });
     },
     
     addUserMessage: function(message) {
@@ -486,61 +657,102 @@ window.WellnessApp = {
     sendChatMessage: function(message) {
         const self = this;
         
+        console.log('🚀 Sending chat message to API:', message);
+        
         // Show typing indicator
         const typingId = this.addAIMessage('', true);
+        console.log('💭 Added typing indicator with ID:', typingId);
+        
+        const requestBody = {
+            message: message,
+            session_id: this.currentChatSession
+        };
+        console.log('📤 Request payload:', requestBody);
         
         fetch('/api/chat-update-plan', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                message: message,
-                session_id: this.currentChatSession
-            })
+            body: JSON.stringify(requestBody)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📥 API response status:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('📊 API response data:', data);
+            
             // Remove typing indicator
             const typingElement = document.getElementById(typingId);
             if (typingElement) {
                 typingElement.remove();
+                console.log('🗑️ Removed typing indicator');
             }
             
             if (data.success) {
+                console.log('✅ API request successful');
+                
                 // Update session ID
                 if (data.session_id) {
                     self.currentChatSession = data.session_id;
+                    console.log('🔗 Updated session ID:', data.session_id);
                 }
                 
                 // Add AI response
-                self.addAIMessage(data.response);
+                if (data.response) {
+                    self.addAIMessage(data.response);
+                    console.log('💬 Added AI response');
+                } else {
+                    console.warn('⚠️ No AI response in successful response');
+                    self.addAIMessage('I received your message but don\'t have a response to show.');
+                }
                 
                 // If there are proposed changes, show them
                 if (data.proposed_changes && data.proposed_changes.length > 0) {
                     self.showProposedChanges(data.proposed_changes);
+                    console.log('🔧 Showed proposed changes:', data.proposed_changes.length);
                 }
             } else {
-                self.addAIMessage('Sorry, I encountered an error: ' + (data.error || 'Unknown error'));
+                console.error('❌ API request failed:', data.error);
+                const errorMessage = data.error || 'Unknown error occurred';
+                self.addAIMessage('Sorry, I encountered an error: ' + errorMessage);
+                self.showToast('Chat error: ' + errorMessage, 'error');
             }
         })
         .catch(error => {
+            console.error('❌ Chat request failed:', error);
+            
             // Remove typing indicator
             const typingElement = document.getElementById(typingId);
             if (typingElement) {
                 typingElement.remove();
+                console.log('🗑️ Removed typing indicator after error');
             }
             
-            self.addAIMessage('Sorry, I encountered an error processing your request. Please try again.');
-            console.error('Chat error:', error);
+            let errorMessage = 'Sorry, I encountered an error processing your request.';
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage += ' Please check your internet connection.';
+                self.updateConnectionStatus(false);
+            } else if (error.message.includes('HTTP 5')) {
+                errorMessage += ' The server is experiencing issues. Please try again later.';
+            } else if (error.message.includes('HTTP 4')) {
+                errorMessage += ' There was a problem with your request. Please try rephrasing.';
+            } else {
+                errorMessage += ' Please try again.';
+            }
+            
+            self.addAIMessage(errorMessage);
+            self.showToast('Chat error: ' + error.message, 'error');
         })
         .finally(() => {
-            // Re-enable send button
-            const sendBtn = document.getElementById('sendBtn');
-            if (sendBtn) {
-                sendBtn.disabled = false;
-                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
-            }
+            console.log('🔄 Resetting UI state');
+            self.setSendingState(false);
         });
     },
     

@@ -272,18 +272,28 @@
 </div>
 
 <!-- Chat with AI Modal -->
-<div class="modal fade" id="chatModal" tabindex="-1" data-bs-backdrop="static">
+<div class="modal fade" id="chatModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="fas fa-comments me-2"></i>Chat with AI to Update Your Plan
                 </h5>
+                <span class="badge bg-success ms-2" id="connectionStatus">Connected</span>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0" style="height: 500px;">
+                <!-- Connection Error Alert -->
+                <div id="connectionAlert" class="alert alert-warning m-3 d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Connection Issue:</strong> <span id="connectionMessage"></span>
+                    <button type="button" class="btn btn-sm btn-outline-warning ms-2" onclick="WellnessApp.retryConnection()">
+                        <i class="fas fa-redo me-1"></i>Retry
+                    </button>
+                </div>
+                
                 <!-- Chat Messages Container -->
-                <div id="chatMessages" class="chat-messages p-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                <div id="chatMessages" class="chat-messages p-3" style="height: 380px; overflow-y: auto; background-color: #f8f9fa;">
                     <!-- Welcome message -->
                     <div class="message ai-message mb-3">
                         <div class="d-flex">
@@ -312,20 +322,26 @@
                 <div class="chat-input border-top p-3">
                     <form id="chatForm">
                         <div class="input-group">
-                            <input type="text" id="chatInput" class="form-control" placeholder="Ask me to modify your wellness plan..." autocomplete="off" required>
-                            <button type="submit" class="btn btn-primary" id="sendBtn">
+                            <input type="text" id="chatInput" class="form-control" placeholder="Ask me to modify your wellness plan..." autocomplete="off" required maxlength="1000">
+                            <button type="submit" class="btn btn-primary" id="sendBtn" disabled>
                                 <i class="fas fa-paper-plane"></i>
                             </button>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <span id="charCount">0</span>/1000 characters
+                                <span class="ms-3" id="inputStatus">Ready to send</span>
+                            </small>
                         </div>
                     </form>
                 </div>
             </div>
             <div class="modal-footer">
-                <small class="text-muted me-auto">
+                <small class="text-muted me-auto" id="footerStatus">
                     <i class="fas fa-info-circle me-1"></i>
                     Changes will be previewed before applying to your plan
                 </small>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="closeBtn">Close</button>
             </div>
         </div>
     </div>

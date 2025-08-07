@@ -21,12 +21,14 @@ try:
     from .calendar_integration import CalendarIntegration
     from .progress_tracker import ProgressTracker
     from .chat_manager import ChatManager
+    from .debug_logger import debug_logger, log_api_call, log_chat_interaction, log_info, log_error
 except ImportError:
     from profile_manager import ProfileManager
     from plan_generator import PlanGenerator
     from calendar_integration import CalendarIntegration
     from progress_tracker import ProgressTracker
     from chat_manager import ChatManager
+    from debug_logger import debug_logger, log_api_call, log_chat_interaction, log_info, log_error
 
 # Set up paths for templates and static files
 project_root = Path(__file__).parent.parent
@@ -39,6 +41,58 @@ app = Flask(__name__,
 app.secret_key = os.environ.get('SECRET_KEY', 'wellness-assistant-secret-key')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 CORS(app)
+
+# Development debug endpoints
+if app.config.get('ENV') == 'development' or app.config.get('DEBUG'):
+    @app.route('/debug/chat-test')
+    def debug_chat_test():
+        """Isolated chat functionality test page"""
+        return render_template('debug/chat_test.html')
+    
+    @app.route('/debug/ai-status')
+    def debug_ai_status():
+        """Check AI integration status"""
+        try:
+            plan_gen = PlanGenerator()
+            status = {
+                'ai_available': plan_gen.is_ai_available(),
+                'openai_key_configured': bool(os.environ.get('OPENAI_API_KEY')),
+                'anthropic_key_configured': bool(os.environ.get('ANTHROPIC_API_KEY')),
+                'timestamp': datetime.now().isoformat()
+            }
+            return jsonify(status)
+        except Exception as e:
+            return jsonify({
+                'error': str(e),
+                'ai_available': False,
+                'timestamp': datetime.now().isoformat()
+            }), 500
+    
+    @app.route('/debug/chat-direct', methods=['POST'])
+    def debug_chat_direct():
+        """Direct chat API test endpoint"""
+        try:
+            data = request.json
+            message = data.get('message', '')
+            
+            if not message:
+                return jsonify({'error': 'No message provided'}), 400
+            
+            plan_gen = PlanGenerator()
+            response = plan_gen.get_ai_chat_response(message)
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'response': response,
+                'timestamp': datetime.now().isoformat()
+            })
+        except Exception as e:
+            return jsonify({
+                'error': str(e),
+                'success': False,
+                'timestamp': datetime.now().isoformat()
+            }), 500
 
 # Add template filters for date formatting
 @app.template_filter('format_date')
@@ -405,28 +459,68 @@ def api_progress_chart_data():
     return jsonify(chart_data)
 
 @app.route('/api/chat-update-plan', methods=['POST'])
+@log_api_call
 def api_chat_update_plan():
     """API endpoint for chatting with AI to update wellness plan."""
     try:
+        log_info("CHAT_API: Processing new chat request")
+        
+        # Validate request data
+        if not request.is_json:
+            log_error("CHAT_API: Request is not JSON", content_type=request.content_type)
+            return jsonify({'success': False, 'error': 'Request must be JSON'}), 400
+        
         data = request.get_json()
+        log_info("CHAT_API: Request data received", request_size=len(str(data)))
+        
+        if not data:
+            log_error("CHAT_API: No data in request")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
         message = data.get('message', '').strip()
         session_id = data.get('session_id')
         
+        debug_logger.chat_request(message, session_id)
+        
         if not message:
+            log_error("CHAT_API: Empty message")
             return jsonify({'success': False, 'error': 'Message is required'}), 400
         
-        # Start or resume chat session
-        if not session_id:
-            session_id = chat_manager.start_new_session()
+        if len(message) > 1000:
+            log_error("CHAT_API: Message too long", length=len(message))
+            return jsonify({'success': False, 'error': 'Message too long (max 1000 characters)'}), 400
         
-        # Add user message to chat history
-        chat_manager.add_user_message(message, session_id)
+        # Start or resume chat session
+        try:
+            if not session_id:
+                session_id = chat_manager.start_new_session()
+                print(f"🆕 Chat API: Started new session: {session_id}")
+            else:
+                print(f"🔄 Chat API: Resuming session: {session_id}")
+            
+            # Add user message to chat history
+            chat_manager.add_user_message(message, session_id)
+            print("📝 Chat API: Added user message to history")
+        except Exception as e:
+            print(f"❌ Chat API: Session management error: {e}")
+            return jsonify({'success': False, 'error': 'Session management error'}), 500
         
         # Load current plan
-        plan = plan_generator.load_plan()
+        print("📋 Chat API: Loading plan")
+        try:
+            plan = plan_generator.load_plan()
+            print(f"📊 Chat API: Plan loaded: {bool(plan)}")
+        except Exception as e:
+            print(f"❌ Chat API: Error loading plan: {e}")
+            return jsonify({'success': False, 'error': 'Failed to load wellness plan'}), 500
+        
         if not plan:
+            print("❌ Chat API: No plan found")
             error_response = 'No wellness plan found. Please generate a plan first.'
-            chat_manager.add_ai_response(error_response, [], session_id)
+            try:
+                chat_manager.add_ai_response(error_response, [], session_id)
+            except Exception as e:
+                print(f"⚠️ Chat API: Failed to save error response: {e}")
             return jsonify({
                 'success': False, 
                 'error': error_response,
@@ -434,42 +528,82 @@ def api_chat_update_plan():
             }), 400
         
         # Load user profile for context
-        profile = profile_manager.load_profile()
+        print("👤 Chat API: Loading profile")
+        try:
+            profile = profile_manager.load_profile()
+            print(f"👤 Chat API: Profile loaded: {bool(profile)}")
+        except Exception as e:
+            print(f"❌ Chat API: Error loading profile: {e}")
+            profile = None
+        
+        # Handle missing profile gracefully
+        if not profile:
+            print("⚠️ Chat API: No profile found, proceeding with limited context")
         
         # Get conversation context
-        conversation_context = chat_manager.get_conversation_context(session_id)
+        try:
+            conversation_context = chat_manager.get_conversation_context(session_id)
+            print(f"🔗 Chat API: Loaded {len(conversation_context)} context messages")
+        except Exception as e:
+            print(f"⚠️ Chat API: Failed to load conversation context: {e}")
+            conversation_context = []
         
         # Process the chat message and get AI response
+        print("🤖 Chat API: Processing with AI...")
         try:
             response_data = plan_generator.process_chat_update(message, plan, profile, conversation_context)
+            print(f"✅ Chat API: AI processing successful: {response_data}")
+            
+            if not response_data or not isinstance(response_data, dict):
+                raise ValueError("Invalid AI response format")
+            
+            ai_response = response_data.get('response', 'Plan updated successfully!')
+            proposed_changes = response_data.get('proposed_changes', [])
+            plan_modified = response_data.get('plan_modified', False)
             
             # Add AI response to chat history
-            chat_manager.add_ai_response(
-                response_data.get('response', 'Plan updated successfully!'),
-                response_data.get('proposed_changes', []),
-                session_id
-            )
+            try:
+                chat_manager.add_ai_response(ai_response, proposed_changes, session_id)
+                print("📝 Chat API: Added AI response to history")
+            except Exception as e:
+                print(f"⚠️ Chat API: Failed to save AI response to history: {e}")
             
             return jsonify({
                 'success': True,
-                'response': response_data.get('response', 'Plan updated successfully!'),
-                'proposed_changes': response_data.get('proposed_changes'),
-                'plan_modified': response_data.get('plan_modified', False),
+                'response': ai_response,
+                'proposed_changes': proposed_changes,
+                'plan_modified': plan_modified,
                 'session_id': session_id
             })
+            
         except Exception as e:
-            error_response = 'Sorry, I encountered an error processing your request. Please try again.'
-            chat_manager.add_ai_response(error_response, [], session_id)
-            print(f"Error processing chat update: {e}")
+            print(f"❌ Chat API: AI processing error: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            error_response = 'Sorry, I encountered an error processing your request. Please try again or rephrase your message.'
+            
+            try:
+                chat_manager.add_ai_response(error_response, [], session_id)
+            except Exception as save_error:
+                print(f"⚠️ Chat API: Failed to save error response: {save_error}")
+            
             return jsonify({
                 'success': False,
                 'error': error_response,
-                'session_id': session_id
+                'session_id': session_id,
+                'technical_error': str(e) if app.debug else None
             }), 500
         
     except Exception as e:
-        print(f"Error in chat update API: {e}")
-        return jsonify({'success': False, 'error': 'Invalid request'}), 500
+        print(f"❌ Chat API: Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False, 
+            'error': 'Internal server error. Please try again.',
+            'technical_error': str(e) if app.debug else None
+        }), 500
 
 @app.route('/api/chat-sessions')
 def api_chat_sessions():
@@ -804,6 +938,101 @@ def api_delete_wellness_events():
             'message': f'Deleted {deleted_count} wellness events, {failed_count} failed',
             'deleted_count': deleted_count,
             'failed_count': failed_count
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/detect-duplicates', methods=['POST'])
+def api_detect_duplicates():
+    """Detect duplicate events in the calendar."""
+    try:
+        data = request.get_json()
+        days_back = data.get('days_back', 30)
+        days_forward = data.get('days_forward', 30)
+        min_similarity = data.get('min_similarity_score', 80.0)
+        
+        if not calendar_integration.authenticate():
+            return jsonify({'error': 'Calendar authentication failed'}), 500
+        
+        # Get duplicate detection results
+        start_date = datetime.now() - timedelta(days=days_back)
+        end_date = datetime.now() + timedelta(days=days_forward)
+        
+        duplicate_pairs = calendar_integration.detect_duplicate_events(start_date, end_date)
+        duplicate_groups = calendar_integration.get_duplicate_groups(start_date, end_date, min_similarity)
+        
+        return jsonify({
+            'success': True,
+            'duplicate_pairs': len(duplicate_pairs),
+            'duplicate_groups': len(duplicate_groups),
+            'groups': duplicate_groups,
+            'scan_period': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/resolve-duplicates', methods=['POST'])
+def api_resolve_duplicates():
+    """Resolve duplicate events by deleting unwanted duplicates."""
+    try:
+        data = request.get_json()
+        strategy = data.get('resolution_strategy', 'recommended')
+        dry_run = data.get('dry_run', True)  # Default to dry run for safety
+        group_ids = data.get('group_ids', None)  # Optionally specify which groups to resolve
+        
+        if not calendar_integration.authenticate():
+            return jsonify({'error': 'Calendar authentication failed'}), 500
+        
+        # Get duplicate groups to resolve
+        if group_ids:
+            # Filter to only specified groups
+            all_groups = calendar_integration.get_duplicate_groups()
+            duplicate_groups = [g for g in all_groups if g['group_id'] in group_ids]
+        else:
+            duplicate_groups = calendar_integration.get_duplicate_groups()
+        
+        # Resolve duplicates
+        resolution_result = calendar_integration.resolve_duplicates(
+            duplicate_groups=duplicate_groups,
+            resolution_strategy=strategy,
+            dry_run=dry_run
+        )
+        
+        return jsonify({
+            'success': True,
+            'resolution_result': resolution_result,
+            'message': f"{'[DRY RUN] ' if dry_run else ''}Processed {resolution_result['processed_groups']} duplicate groups"
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete-duplicates-batch', methods=['POST'])
+def api_delete_duplicates_batch():
+    """Delete multiple duplicate events in batch."""
+    try:
+        data = request.get_json()
+        event_ids = data.get('event_ids', [])
+        dry_run = data.get('dry_run', True)  # Default to dry run for safety
+        
+        if not event_ids:
+            return jsonify({'error': 'No event IDs provided'}), 400
+        
+        if not calendar_integration.authenticate():
+            return jsonify({'error': 'Calendar authentication failed'}), 500
+        
+        # Delete events in batch
+        result = calendar_integration.delete_duplicate_events_batch(event_ids, dry_run)
+        
+        return jsonify({
+            'success': True,
+            'batch_result': result,
+            'message': f"{'[DRY RUN] ' if dry_run else ''}Processed {result['requested_deletions']} event deletions"
         })
         
     except Exception as e:

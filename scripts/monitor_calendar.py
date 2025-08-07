@@ -105,6 +105,77 @@ class CalendarMonitor:
         
         return conflicts
     
+    def detect_duplicate_events(self) -> List[Dict[str, Any]]:
+        """Detect duplicate events using the calendar integration."""
+        try:
+            duplicates = self.calendar.detect_duplicate_events()
+            print(f"🔍 Found {len(duplicates)} potential duplicate pairs")
+            return duplicates
+        except Exception as e:
+            print(f"Error detecting duplicates: {e}")
+            return []
+    
+    def analyze_duplicates(self) -> Dict[str, Any]:
+        """Analyze duplicate patterns and provide detailed report."""
+        analysis = {
+            'timestamp': datetime.now().isoformat(),
+            'duplicate_pairs': 0,
+            'duplicate_groups': 0,
+            'total_duplicate_events': 0,
+            'high_confidence_duplicates': 0,
+            'duplicate_patterns': {},
+            'resolution_recommendations': []
+        }
+        
+        try:
+            # Get duplicate pairs
+            duplicate_pairs = self.calendar.detect_duplicate_events()
+            analysis['duplicate_pairs'] = len(duplicate_pairs)
+            
+            # Get duplicate groups
+            duplicate_groups = self.calendar.get_duplicate_groups()
+            analysis['duplicate_groups'] = len(duplicate_groups)
+            
+            # Count total events involved
+            involved_events = set()
+            for pair in duplicate_pairs:
+                involved_events.add(pair['event1']['id'])
+                involved_events.add(pair['event2']['id'])
+            analysis['total_duplicate_events'] = len(involved_events)
+            
+            # Count high confidence duplicates (>90% similarity)
+            high_conf = [p for p in duplicate_pairs if p['similarity_score'] > 90]
+            analysis['high_confidence_duplicates'] = len(high_conf)
+            
+            # Analyze duplicate patterns
+            patterns = {}
+            for pair in duplicate_pairs:
+                event1_title = self.calendar._clean_event_title(pair['event1']['summary'])
+                patterns[event1_title] = patterns.get(event1_title, 0) + 1
+            analysis['duplicate_patterns'] = dict(sorted(patterns.items(), key=lambda x: x[1], reverse=True)[:5])
+            
+            # Generate recommendations
+            if analysis['duplicate_groups'] > 0:
+                analysis['resolution_recommendations'].append(
+                    f"Resolve {analysis['duplicate_groups']} duplicate groups to clean up calendar"
+                )
+            
+            if analysis['high_confidence_duplicates'] > 5:
+                analysis['resolution_recommendations'].append(
+                    "High number of confident duplicates detected - consider automated resolution"
+                )
+            
+            if len(analysis['duplicate_patterns']) > 0:
+                most_common = list(analysis['duplicate_patterns'].keys())[0]
+                analysis['resolution_recommendations'].append(
+                    f"Most common duplicate pattern: '{most_common}' - check scheduling logic"
+                )
+        
+        except Exception as e:
+            analysis['error'] = str(e)
+            
+        return analysis
+    
     def validate_calendar_sync(self) -> Dict[str, Any]:
         """Validate that app data matches calendar data."""
         validation_data = {
@@ -229,6 +300,21 @@ class CalendarMonitor:
         
         print()
         
+        # Duplicate analysis
+        duplicate_analysis = self.analyze_duplicates()
+        print(f"🔍 Duplicate Detection:")
+        print(f"   Duplicate Pairs: {duplicate_analysis['duplicate_pairs']}")
+        print(f"   Duplicate Groups: {duplicate_analysis['duplicate_groups']}")
+        print(f"   Total Events Involved: {duplicate_analysis['total_duplicate_events']}")
+        print(f"   High Confidence: {duplicate_analysis['high_confidence_duplicates']}")
+        
+        if duplicate_analysis['duplicate_patterns']:
+            print(f"   Most Common Patterns:")
+            for pattern, count in list(duplicate_analysis['duplicate_patterns'].items())[:3]:
+                print(f"      • '{pattern}': {count} occurrences")
+        
+        print()
+        
         # Sync validation
         sync = self.validate_calendar_sync()
         print(f"🔄 Calendar Sync Status:")
@@ -286,6 +372,9 @@ class CalendarMonitor:
         if analysis['success_rate'] < 80:
             recommendations.append("Improve scheduling success rate by analyzing failure reasons")
         
+        if duplicate_analysis['duplicate_groups'] > 0:
+            recommendations.extend(duplicate_analysis['resolution_recommendations'])
+        
         if not recommendations:
             recommendations.append("Calendar integration appears healthy!")
         
@@ -296,6 +385,7 @@ class CalendarMonitor:
         report_data = {
             'generated_at': datetime.now().isoformat(),
             'health': health,
+            'duplicate_analysis': duplicate_analysis,
             'sync_validation': sync,
             'scheduling_analysis': analysis,
             'recommendations': recommendations
@@ -366,11 +456,36 @@ def main():
                     print(f"   • {conflict['event1']['summary']} overlaps with {conflict['event2']['summary']}")
             else:
                 print("✅ No conflicts detected")
+        elif sys.argv[1] == '--duplicates':
+            duplicates = monitor.detect_duplicate_events()
+            if duplicates:
+                print(f"🔍 Found {len(duplicates)} potential duplicate pairs:")
+                for dup in duplicates[:5]:  # Show first 5
+                    print(f"   • {dup['event1']['summary']} vs {dup['event2']['summary']} ({dup['similarity_score']:.1f}% similar)")
+                if len(duplicates) > 5:
+                    print(f"   ... and {len(duplicates) - 5} more")
+            else:
+                print("✅ No duplicates detected")
+        elif sys.argv[1] == '--resolve-duplicates':
+            dry_run = '--dry-run' in sys.argv
+            print(f"🔧 {'[DRY RUN] ' if dry_run else ''}Resolving duplicate events...")
+            
+            duplicate_groups = monitor.calendar.get_duplicate_groups()
+            if not duplicate_groups:
+                print("✅ No duplicate groups found to resolve")
+            else:
+                result = monitor.calendar.resolve_duplicates(dry_run=dry_run)
+                print(f"📊 Resolution completed:")
+                print(f"   Groups processed: {result['processed_groups']}")
+                print(f"   Events deleted: {len(result['deleted_events'])}")
+                print(f"   Events kept: {len(result['kept_events'])}")
+                if result['failed_deletions']:
+                    print(f"   Failed deletions: {len(result['failed_deletions'])}")
         elif sys.argv[1] == '--monitor':
             interval = int(sys.argv[2]) if len(sys.argv) > 2 else 30
             monitor.continuous_monitoring(interval)
         else:
-            print("Usage: python3 monitor_calendar.py [--report|--health|--conflicts|--monitor [interval]]")
+            print("Usage: python3 monitor_calendar.py [--report|--health|--conflicts|--duplicates|--resolve-duplicates [--dry-run]|--monitor [interval]]")
     else:
         monitor.generate_report()
 

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Test - Debug Mode</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .debug-header { background: linear-gradient(135deg, #dc3545, #bd2130); color: white; }
+        .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-connected { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .chat-container { max-height: 400px; overflow-y: auto; }
+        .message { margin-bottom: 15px; }
+        .user-message { text-align: right; }
+        .ai-message { text-align: left; }
+        .user-bubble { background: #007bff; color: white; padding: 10px 15px; border-radius: 18px; display: inline-block; max-width: 70%; }
+        .ai-bubble { background: #e9ecef; color: #333; padding: 10px 15px; border-radius: 18px; display: inline-block; max-width: 70%; }
+        .debug-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 10px 0; }
+        .api-log { background: #343a40; color: #fff; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="debug-header p-3 mb-4 rounded">
+                    <h1 class="h3 mb-1"><i class="fas fa-bug"></i> Chat Debug Test</h1>
+                    <p class="mb-0">Isolated chat functionality testing - No PyInstaller builds required</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status Dashboard -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-heartbeat"></i> System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Flask Server</span>
+                            <span><div class="status-indicator status-connected"></div>Connected</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>AI Integration</span>
+                            <span id="ai-status"><div class="status-indicator status-warning"></div>Checking...</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Chat API</span>
+                            <span id="chat-api-status"><div class="status-indicator status-warning"></div>Ready</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Debug Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="debug-info" class="debug-info">
+                            <strong>Debug Mode Active</strong><br>
+                            <small>Direct API testing • Real-time logging • No build required</small><br>
+                            <small id="timestamp">Loading...</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Interface -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-comments"></i> Chat Test Interface</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="chat-messages" class="chat-container border p-3 mb-3 rounded">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-robot fa-2x mb-2"></i><br>
+                                Start a conversation to test the chat functionality
+                            </div>
+                        </div>
+                        
+                        <form id="chat-form">
+                            <div class="input-group">
+                                <input type="text" id="chat-input" class="form-control" placeholder="Type your message..." maxlength="1000">
+                                <button type="submit" id="send-btn" class="btn btn-primary" disabled>
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <span id="char-count">0</span>/1000 characters
+                                <span class="ms-3" id="input-status">Type a message...</span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-terminal"></i> API Log</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="api-log" class="api-log">
+                            <div>🚀 Debug session started</div>
+                            <div>📡 Checking system status...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class ChatDebugger {
+            constructor() {
+                this.initializeUI();
+                this.checkSystemStatus();
+            }
+            
+            initializeUI() {
+                this.chatForm = document.getElementById('chat-form');
+                this.chatInput = document.getElementById('chat-input');
+                this.sendBtn = document.getElementById('send-btn');
+                this.chatMessages = document.getElementById('chat-messages');
+                this.charCount = document.getElementById('char-count');
+                this.inputStatus = document.getElementById('input-status');
+                this.apiLog = document.getElementById('api-log');
+                
+                // Event listeners
+                this.chatInput.addEventListener('input', () => this.handleInput());
+                this.chatForm.addEventListener('submit', (e) => this.handleSubmit(e));
+                
+                this.log('✅ UI initialized');
+            }
+            
+            handleInput() {
+                const length = this.chatInput.value.length;
+                this.charCount.textContent = length;
+                
+                if (length === 0) {
+                    this.sendBtn.disabled = true;
+                    this.inputStatus.textContent = 'Type a message...';
+                    this.charCount.className = 'text-muted';
+                } else if (length > 950) {
+                    this.sendBtn.disabled = length > 1000;
+                    this.inputStatus.textContent = length > 1000 ? 'Message too long' : 'Almost at limit';
+                    this.charCount.className = 'text-danger';
+                } else if (length > 800) {
+                    this.sendBtn.disabled = false;
+                    this.inputStatus.textContent = 'Ready to send';
+                    this.charCount.className = 'text-warning';
+                } else {
+                    this.sendBtn.disabled = false;
+                    this.inputStatus.textContent = 'Ready to send';
+                    this.charCount.className = 'text-muted';
+                }
+            }
+            
+            async handleSubmit(e) {
+                e.preventDefault();
+                
+                const message = this.chatInput.value.trim();
+                if (!message || this.sendBtn.disabled) return;
+                
+                this.log(`📤 Sending message: "${message}"`);
+                
+                // Add user message to UI
+                this.addMessage(message, 'user');
+                
+                // Clear input and set loading state
+                this.chatInput.value = '';
+                this.handleInput();
+                this.setLoading(true);
+                
+                try {
+                    // Send to direct chat API
+                    const response = await fetch('/debug/chat-direct', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        this.log(`📥 AI Response received: "${data.response}"`);
+                        this.addMessage(data.response, 'ai');
+                        this.updateStatus('chat-api-status', 'connected', 'Working');
+                    } else {
+                        const error = data.error || 'Unknown error';
+                        this.log(`❌ Chat API Error: ${error}`);
+                        this.addMessage(`Error: ${error}`, 'ai', true);
+                        this.updateStatus('chat-api-status', 'error', 'Error');
+                    }
+                } catch (error) {
+                    this.log(`❌ Network Error: ${error.message}`);
+                    this.addMessage(`Network error: ${error.message}`, 'ai', true);
+                    this.updateStatus('chat-api-status', 'error', 'Network Error');
+                }
+                
+                this.setLoading(false);
+            }
+            
+            addMessage(text, sender, isError = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                
+                const bubbleClass = sender === 'user' ? 'user-bubble' : 'ai-bubble';
+                const errorClass = isError ? ' border border-danger' : '';
+                
+                messageDiv.innerHTML = `
+                    <div class="${bubbleClass}${errorClass}">
+                        ${this.escapeHtml(text)}
+                    </div>
+                `;
+                
+                // Clear welcome message if it exists
+                if (this.chatMessages.querySelector('.text-center.text-muted')) {
+                    this.chatMessages.innerHTML = '';
+                }
+                
+                this.chatMessages.appendChild(messageDiv);
+                this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            }
+            
+            setLoading(loading) {
+                if (loading) {
+                    this.sendBtn.disabled = true;
+                    this.sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                    this.inputStatus.textContent = 'Sending message...';
+                } else {
+                    this.sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                    this.handleInput(); // Reset button state based on input
+                }
+            }
+            
+            async checkSystemStatus() {
+                this.log('🔍 Checking AI status...');
+                
+                try {
+                    const response = await fetch('/debug/ai-status');
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        if (data.ai_available) {
+                            this.updateStatus('ai-status', 'connected', 'Available');
+                            this.log('✅ AI integration is working');
+                        } else {
+                            this.updateStatus('ai-status', 'warning', 'Limited');
+                            this.log('⚠️ AI integration has issues');
+                        }
+                        
+                        // Update debug info
+                        document.getElementById('debug-info').innerHTML = `
+                            <strong>Debug Status</strong><br>
+                            <small>OpenAI: ${data.openai_key_configured ? '✅' : '❌'} | Anthropic: ${data.anthropic_key_configured ? '✅' : '❌'}</small><br>
+                            <small>Last checked: ${new Date(data.timestamp).toLocaleTimeString()}</small>
+                        `;
+                    } else {
+                        this.updateStatus('ai-status', 'error', 'Error');
+                        this.log(`❌ AI status check failed: ${data.error}`);
+                    }
+                } catch (error) {
+                    this.updateStatus('ai-status', 'error', 'Unreachable');
+                    this.log(`❌ AI status check error: ${error.message}`);
+                }
+            }
+            
+            updateStatus(elementId, status, text) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const statusClass = `status-${status === 'connected' ? 'connected' : status === 'error' ? 'error' : 'warning'}`;
+                    element.innerHTML = `<div class="status-indicator ${statusClass}"></div>${text}`;
+                }
+            }
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                this.apiLog.appendChild(logEntry);
+                this.apiLog.scrollTop = this.apiLog.scrollHeight;
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize when DOM loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatDebugger();
+        });
+    </script>
+</body>
+</html>

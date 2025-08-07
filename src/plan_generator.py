@@ -451,19 +451,30 @@ Return ONLY valid JSON in this exact format:
     
     def process_chat_update(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any], conversation_context: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process a chat message to update the wellness plan."""
+        print(f"🤖 Processing chat update: '{message[:50]}...'")
+        
         if not self.client:
+            print("⚠️ AI client not available, using fallback")
             return self._process_chat_fallback(message, current_plan, profile)
         
         # Build context for the AI
-        context = self._build_chat_context(message, current_plan, profile, conversation_context)
+        try:
+            context = self._build_chat_context(message, current_plan, profile, conversation_context)
+            print(f"📋 Built AI context (length: {len(context)} chars)")
+        except Exception as e:
+            print(f"❌ Error building context: {e}")
+            return self._process_chat_fallback(message, current_plan, profile)
         
         try:
-            print(f"🤖 Processing plan update request: {message[:50]}...")
+            print(f"🔄 Sending request to AI model...")
+            
             response = self.client.chat.completions.create(
                 model="grok-beta",
                 messages=[{
                     "role": "system",
                     "content": """You are a professional wellness coach AI assistant. You help users modify their existing wellness plans based on their requests. 
+                    
+                    IMPORTANT: Always respond with valid JSON only. Do not include any markdown code blocks or additional text.
                     
                     Your responses should:
                     1. Be conversational and encouraging
@@ -471,49 +482,86 @@ Return ONLY valid JSON in this exact format:
                     3. Suggest improvements when appropriate
                     4. Always prioritize user safety and realistic expectations
                     
-                    Return your response as JSON with this structure:
+                    Return your response as JSON with exactly this structure:
                     {
                         "response": "Your conversational response to the user",
                         "changes_made": ["List of specific changes made"],
-                        "plan_modified": true/false,
-                        "modified_plan": {...} // The updated plan if modified
+                        "plan_modified": true,
+                        "modified_plan": {...}
                     }
                     
-                    If you cannot fulfill the request safely or it's unclear, ask for clarification."""
+                    If you cannot fulfill the request safely or it's unclear, set plan_modified to false and ask for clarification in the response field."""
                 }, {
                     "role": "user",
                     "content": context
                 }],
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=2000,
+                timeout=30.0  # 30 second timeout
             )
             
             response_content = response.choices[0].message.content
+            print(f"📥 AI response received (length: {len(response_content)} chars)")
+            print(f"🔍 Raw AI response: {response_content[:200]}...")
             
             # Clean up the response to extract JSON
-            if "```json" in response_content:
-                response_content = response_content.split("```json")[1].split("```")[0].strip()
-            elif "```" in response_content:
-                response_content = response_content.split("```")[1].split("```")[0].strip()
+            cleaned_content = self._clean_ai_response(response_content)
+            print(f"🧹 Cleaned response: {cleaned_content[:200]}...")
             
-            response_data = json.loads(response_content)
+            try:
+                response_data = json.loads(cleaned_content)
+                print(f"✅ JSON parsing successful: {response_data}")
+            except json.JSONDecodeError as e:
+                print(f"❌ JSON parsing failed: {e}")
+                print(f"🔍 Failed content: {cleaned_content}")
+                # Try to salvage what we can
+                response_data = self._parse_malformed_json(cleaned_content, message)
+                if not response_data:
+                    raise ValueError("Could not parse AI response as valid JSON")
+            
+            # Validate response structure
+            if not isinstance(response_data, dict):
+                raise ValueError("AI response is not a dictionary")
+            
+            required_keys = ['response', 'changes_made', 'plan_modified']
+            missing_keys = [key for key in required_keys if key not in response_data]
+            if missing_keys:
+                print(f"⚠️ Missing keys in AI response: {missing_keys}")
+                # Fill in missing keys with defaults
+                if 'response' not in response_data:
+                    response_data['response'] = 'I processed your request.'
+                if 'changes_made' not in response_data:
+                    response_data['changes_made'] = []
+                if 'plan_modified' not in response_data:
+                    response_data['plan_modified'] = False
             
             # If plan was modified, save it
             if response_data.get('plan_modified') and response_data.get('modified_plan'):
-                modified_plan = response_data['modified_plan']
-                # Preserve metadata
-                modified_plan['generated_at'] = current_plan.get('generated_at')
-                modified_plan['profile_snapshot'] = current_plan.get('profile_snapshot')
-                modified_plan['last_modified'] = datetime.now().isoformat()
-                modified_plan['modification_history'] = current_plan.get('modification_history', [])
-                modified_plan['modification_history'].append({
-                    'timestamp': datetime.now().isoformat(),
-                    'request': message,
-                    'changes': response_data.get('changes_made', [])
-                })
-                
-                self.save_plan(modified_plan)
-                print("Plan updated and saved!")
+                print("💾 Saving modified plan...")
+                try:
+                    modified_plan = response_data['modified_plan']
+                    
+                    # Validate that modified_plan is a dictionary
+                    if not isinstance(modified_plan, dict):
+                        print("❌ Modified plan is not a valid dictionary")
+                        raise ValueError("Modified plan format is invalid")
+                    
+                    # Preserve metadata
+                    modified_plan['generated_at'] = current_plan.get('generated_at')
+                    modified_plan['profile_snapshot'] = current_plan.get('profile_snapshot')
+                    modified_plan['last_modified'] = datetime.now().isoformat()
+                    modified_plan['modification_history'] = current_plan.get('modification_history', [])
+                    modified_plan['modification_history'].append({
+                        'timestamp': datetime.now().isoformat(),
+                        'request': message,
+                        'changes': response_data.get('changes_made', [])
+                    })
+                    
+                    self.save_plan(modified_plan)
+                    print("✅ Plan updated and saved!")
+                except Exception as save_error:
+                    print(f"❌ Error saving modified plan: {save_error}")
+                    # Don't fail the whole request, just log the error
             
             return {
                 'response': response_data.get('response', 'Plan updated successfully!'),
@@ -521,11 +569,11 @@ Return ONLY valid JSON in this exact format:
                 'plan_modified': response_data.get('plan_modified', False)
             }
             
-        except json.JSONDecodeError as e:
-            print(f"Error parsing AI response: {e}")
-            return self._process_chat_fallback(message, current_plan, profile)
-        except Exception as e:
-            print(f"Error processing chat update: {e}")
+        except Exception as ai_error:
+            print(f"❌ AI processing error: {ai_error}")
+            import traceback
+            traceback.print_exc()
+            print("🔄 Falling back to rule-based processing...")
             return self._process_chat_fallback(message, current_plan, profile)
     
     def _build_chat_context(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any], conversation_context: List[Dict[str, Any]] = None) -> str:
@@ -582,85 +630,216 @@ Please modify the current wellness plan based on the user's request. Consider th
         
         return context
     
+    def _clean_ai_response(self, response_content: str) -> str:
+        """Clean AI response content to extract valid JSON."""
+        try:
+            # Remove markdown code blocks
+            if "```json" in response_content.lower():
+                # Extract content between ```json and ```
+                start = response_content.lower().find("```json") + 7
+                end = response_content.find("```", start)
+                if end != -1:
+                    response_content = response_content[start:end].strip()
+            elif "```" in response_content:
+                # Extract content between ``` blocks
+                parts = response_content.split("```")
+                if len(parts) >= 3:
+                    response_content = parts[1].strip()
+            
+            # Remove any text before the first { or [
+            first_brace = response_content.find('{')
+            first_bracket = response_content.find('[')
+            
+            if first_brace != -1 and (first_bracket == -1 or first_brace < first_bracket):
+                start_pos = first_brace
+            elif first_bracket != -1:
+                start_pos = first_bracket
+            else:
+                start_pos = 0
+            
+            if start_pos > 0:
+                response_content = response_content[start_pos:]
+            
+            # Remove any text after the last } or ]
+            last_brace = response_content.rfind('}')
+            last_bracket = response_content.rfind(']')
+            
+            if last_brace != -1 and (last_bracket == -1 or last_brace > last_bracket):
+                end_pos = last_brace + 1
+            elif last_bracket != -1:
+                end_pos = last_bracket + 1
+            else:
+                end_pos = len(response_content)
+            
+            if end_pos < len(response_content):
+                response_content = response_content[:end_pos]
+            
+            return response_content.strip()
+            
+        except Exception as e:
+            print(f"⚠️ Error cleaning AI response: {e}")
+            return response_content
+    
+    def _parse_malformed_json(self, content: str, original_message: str) -> Optional[Dict[str, Any]]:
+        """Attempt to parse malformed JSON or create a fallback response."""
+        try:
+            print("🔧 Attempting to salvage malformed JSON...")
+            
+            # Try to extract key information with regex
+            import re
+            
+            # Look for a response field
+            response_match = re.search(r'"response"\s*:\s*"([^"]*)"', content, re.IGNORECASE)
+            response_text = response_match.group(1) if response_match else "I processed your request but couldn't format the response properly."
+            
+            # Look for changes
+            changes_match = re.search(r'"changes_made"\s*:\s*\[(.*?)\]', content, re.DOTALL)
+            changes = []
+            if changes_match:
+                changes_content = changes_match.group(1)
+                # Extract quoted strings
+                change_matches = re.findall(r'"([^"]*)"', changes_content)
+                changes = change_matches
+            
+            # Look for plan_modified flag
+            modified_match = re.search(r'"plan_modified"\s*:\s*(true|false)', content, re.IGNORECASE)
+            plan_modified = modified_match.group(1).lower() == 'true' if modified_match else False
+            
+            print(f"🔧 Salvaged response: {response_text[:50]}...")
+            print(f"🔧 Salvaged changes: {changes}")
+            print(f"🔧 Salvaged modified: {plan_modified}")
+            
+            return {
+                'response': response_text,
+                'changes_made': changes,
+                'plan_modified': plan_modified,
+                'modified_plan': None  # Can't salvage the modified plan safely
+            }
+            
+        except Exception as e:
+            print(f"❌ Failed to salvage JSON: {e}")
+            
+            # Final fallback - create a basic response
+            return {
+                'response': f"I received your message '{original_message[:50]}...' but encountered a formatting issue in my response. Please try rephrasing your request.",
+                'changes_made': [],
+                'plan_modified': False,
+                'modified_plan': None
+            }
+    
     def _process_chat_fallback(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
         """Fallback chat processing when AI is not available."""
-        print("Processing chat request in fallback mode...")
+        print("🔄 Processing chat request in fallback mode...")
         
-        # Simple keyword-based modifications
-        message_lower = message.lower()
-        changes_made = []
-        plan_modified = False
-        
-        # Basic intensity modifications
-        if any(word in message_lower for word in ['easier', 'reduce', 'less']):
-            # Reduce intensity and duration
-            for day in current_plan.get('days', []):
-                for activity in day.get('activities', []):
-                    if activity.get('intensity') == 'high':
-                        activity['intensity'] = 'moderate'
-                        changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to moderate")
-                        plan_modified = True
-                    elif activity.get('intensity') == 'moderate':
-                        activity['intensity'] = 'low'
-                        changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to low")
-                        plan_modified = True
+        try:
+            # Simple keyword-based modifications
+            message_lower = message.lower()
+            changes_made = []
+            plan_modified = False
+            
+            print(f"🔍 Analyzing message: '{message_lower}'")
+            
+            # Make a deep copy of the plan to avoid modifying the original
+            import copy
+            modified_plan = copy.deepcopy(current_plan)
+            
+            # Basic intensity modifications
+            if any(word in message_lower for word in ['easier', 'reduce', 'less', 'simpler']):
+                print("📉 Detected request to make things easier")
+                # Reduce intensity and duration
+                for day in modified_plan.get('days', []):
+                    for activity in day.get('activities', []):
+                        if activity.get('intensity') == 'high':
+                            activity['intensity'] = 'moderate'
+                            changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to moderate")
+                        elif activity.get('intensity') == 'moderate':
+                            activity['intensity'] = 'low'
+                            changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to low")
+                        
+                        # Reduce duration by 25%
+                        if activity.get('duration_minutes', 0) > 10:
+                            old_duration = activity['duration_minutes']
+                            activity['duration_minutes'] = max(10, int(old_duration * 0.75))
+                            changes_made.append(f"Reduced {activity.get('type', 'activity')} duration from {old_duration} to {activity['duration_minutes']} minutes")
+                
+                plan_modified = True
+            
+            # Basic intensity increases
+            elif any(word in message_lower for word in ['harder', 'increase', 'more', 'intense', 'challenging']):
+                print("📈 Detected request to make things harder")
+                # Increase intensity and duration
+                for day in modified_plan.get('days', []):
+                    for activity in day.get('activities', []):
+                        if activity.get('intensity') == 'low':
+                            activity['intensity'] = 'moderate'
+                            changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to moderate")
+                        elif activity.get('intensity') == 'moderate':
+                            activity['intensity'] = 'high'
+                            changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to high")
+                        
+                        # Increase duration by 25%
+                        if activity.get('duration_minutes', 0) < 60:
+                            old_duration = activity['duration_minutes']
+                            activity['duration_minutes'] = min(60, int(old_duration * 1.25))
+                            changes_made.append(f"Increased {activity.get('type', 'activity')} duration from {old_duration} to {activity['duration_minutes']} minutes")
+                
+                plan_modified = True
+            
+            # Add more activities
+            elif any(word in message_lower for word in ['add', 'more', 'extra']):
+                print("➕ Detected request to add activities")
+                response_text = "I understand you'd like to add more activities, but I need AI processing to make specific additions to your plan. Please try again when the AI service is available, or be more specific about what type of activity you'd like to add."
+                
+            # Remove activities
+            elif any(word in message_lower for word in ['remove', 'delete', 'skip', 'cancel']):
+                print("➖ Detected request to remove activities")
+                response_text = "I understand you'd like to remove activities, but I need AI processing to make specific removals from your plan. Please try again when the AI service is available, or be more specific about which activity you'd like to remove."
+                
+            else:
+                print("❓ No recognized patterns in message")
+                response_text = "I received your message, but I'm currently running in fallback mode with limited capabilities. Please try again when the AI service is available for more sophisticated plan modifications."
+            
+            if plan_modified and changes_made:
+                # Save the modified plan
+                try:
+                    # Preserve metadata
+                    modified_plan['last_modified'] = datetime.now().isoformat()
+                    modified_plan['modification_history'] = current_plan.get('modification_history', [])
+                    modified_plan['modification_history'].append({
+                        'timestamp': datetime.now().isoformat(),
+                        'request': message,
+                        'changes': changes_made,
+                        'processed_by': 'fallback_system'
+                    })
                     
-                    # Reduce duration by 25%
-                    current_duration = activity.get('duration_minutes', 20)
-                    if current_duration > 10:
-                        new_duration = max(10, int(current_duration * 0.75))
-                        activity['duration_minutes'] = new_duration
-                        changes_made.append(f"Reduced {activity.get('type', 'activity')} duration to {new_duration} minutes")
-                        plan_modified = True
-        
-        elif any(word in message_lower for word in ['harder', 'increase', 'more']):
-            # Increase intensity and duration
-            for day in current_plan.get('days', []):
-                for activity in day.get('activities', []):
-                    if activity.get('intensity') == 'low':
-                        activity['intensity'] = 'moderate'
-                        changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to moderate")
-                        plan_modified = True
-                    elif activity.get('intensity') == 'moderate':
-                        activity['intensity'] = 'high'
-                        changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to high")
-                        plan_modified = True
+                    self.save_plan(modified_plan)
+                    print(f"✅ Plan modified and saved in fallback mode with {len(changes_made)} changes")
                     
-                    # Increase duration by 25%
-                    current_duration = activity.get('duration_minutes', 20)
-                    new_duration = int(current_duration * 1.25)
-                    activity['duration_minutes'] = new_duration
-                    changes_made.append(f"Increased {activity.get('type', 'activity')} duration to {new_duration} minutes")
-                    plan_modified = True
-        
-        # Save modified plan
-        if plan_modified:
-            current_plan['last_modified'] = datetime.now().isoformat()
-            current_plan['modification_history'] = current_plan.get('modification_history', [])
-            current_plan['modification_history'].append({
-                'timestamp': datetime.now().isoformat(),
-                'request': message,
-                'changes': changes_made
-            })
-            self.save_plan(current_plan)
-        
-        if not changes_made:
+                    response_text = f"I made {len(changes_made)} changes to your plan using basic processing:\n\n" + "\n".join(f"• {change}" for change in changes_made[:5])
+                    if len(changes_made) > 5:
+                        response_text += f"\n... and {len(changes_made) - 5} more changes."
+                    
+                except Exception as save_error:
+                    print(f"❌ Error saving plan in fallback mode: {save_error}")
+                    response_text = "I identified some changes to make but couldn't save them. Please try again."
+                    plan_modified = False
+                    changes_made = []
+            else:
+                response_text = "I received your message but couldn't identify any specific changes to make in fallback mode. For more sophisticated plan modifications, please try again when the AI service is available."
+            
             return {
-                'response': "I understand you want to modify your plan, but I need more specific instructions. For example, you could ask me to make workouts easier, add more yoga sessions, or change the duration of activities.",
+                'response': response_text,
+                'proposed_changes': changes_made,
+                'plan_modified': plan_modified
+            }
+            
+        except Exception as e:
+            print(f"❌ Error in fallback processing: {e}")
+            return {
+                'response': "I encountered an error while processing your request in fallback mode. Please try again.",
                 'proposed_changes': [],
                 'plan_modified': False
             }
-        
-        response_text = f"I've made the following changes to your wellness plan:\n\n"
-        for change in changes_made:
-            response_text += f"• {change}\n"
-        response_text += f"\nYour plan has been updated and saved. The changes will take effect immediately."
-        
-        return {
-            'response': response_text,
-            'proposed_changes': changes_made,
-            'plan_modified': plan_modified
-        }
 
 if __name__ == "__main__":
     generator = PlanGenerator()
