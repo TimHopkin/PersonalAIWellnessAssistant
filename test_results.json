@@ -1,113 +1,101 @@
 {
   "summary": {
-    "total": 17,
-    "passed": 14,
-    "failed": 3,
-    "success_rate": 82.35294117647058,
-    "run_at": "2025-08-07T13:52:46.965869"
+    "total": 15,
+    "passed": 11,
+    "failed": 4,
+    "success_rate": 73.33333333333333,
+    "run_at": "2025-08-07T15:17:49.597961"
   },
   "detailed_results": [
     {
-      "test": "Data Directory Exists",
-      "success": true,
-      "message": "Path: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih",
-      "timestamp": "2025-08-07T13:52:46.918160"
-    },
-    {
-      "test": "Data Directory Writable",
-      "success": true,
-      "message": "Can write to data directory",
-      "timestamp": "2025-08-07T13:52:46.918174"
-    },
-    {
-      "test": "File Path Generation",
-      "success": true,
-      "message": "Generated: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/test.json",
-      "timestamp": "2025-08-07T13:52:46.918220"
+      "test": "Data Directory Setup",
+      "success": false,
+      "message": "Error: name 'get_app_info' is not defined",
+      "timestamp": "2025-08-07T15:17:49.541486"
     },
     {
       "test": "Profile Save",
       "success": true,
-      "message": "File created: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/profile.json",
-      "timestamp": "2025-08-07T13:52:46.918623"
+      "message": "File created: /Users/timhopkin/Documents/Software Development/Personal AI Wellness Assistant/data/profile.json",
+      "timestamp": "2025-08-07T15:17:49.543108"
     },
     {
       "test": "Profile Load",
       "success": true,
       "message": "Profile loaded: True",
-      "timestamp": "2025-08-07T13:52:46.918672"
+      "timestamp": "2025-08-07T15:17:49.543154"
     },
     {
       "test": "Profile Data Integrity",
       "success": true,
       "message": "Age: True, Weight: True, Goals: True",
-      "timestamp": "2025-08-07T13:52:46.918676"
+      "timestamp": "2025-08-07T15:17:49.543158"
     },
     {
       "test": "Creation Time Preserved",
       "success": true,
       "message": "Original: 2025-08-07T10:00:00, Loaded: 2025-08-07T10:00:00",
-      "timestamp": "2025-08-07T13:52:46.918678"
+      "timestamp": "2025-08-07T15:17:49.543160"
     },
     {
       "test": "Profile Update - Creation Time Preserved",
       "success": true,
       "message": "Original: 2025-08-07T10:00:00, Final: 2025-08-07T10:00:00",
-      "timestamp": "2025-08-07T13:52:46.919875"
+      "timestamp": "2025-08-07T15:17:49.544128"
     },
     {
       "test": "Profile Update - Data Changed",
       "success": true,
       "message": "Age: 36, Fitness: advanced",
-      "timestamp": "2025-08-07T13:52:46.919878"
+      "timestamp": "2025-08-07T15:17:49.544132"
     },
     {
       "test": "Profile Backup Created",
       "success": true,
-      "message": "Backup: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/profile.json.backup",
-      "timestamp": "2025-08-07T13:52:46.920380"
+      "message": "Backup: /Users/timhopkin/Documents/Software Development/Personal AI Wellness Assistant/data/profile.json.backup",
+      "timestamp": "2025-08-07T15:17:49.544616"
     },
     {
       "test": "Corruption Detection",
       "success": true,
       "message": "Detected invalid profile",
-      "timestamp": "2025-08-07T13:52:46.920487"
+      "timestamp": "2025-08-07T15:17:49.544735"
     },
     {
       "test": "Profile Recovery",
       "success": false,
       "message": "Recovered from backup successfully",
-      "timestamp": "2025-08-07T13:52:46.920701"
+      "timestamp": "2025-08-07T15:17:49.544989"
     },
     {
       "test": "Concurrent Access",
       "success": false,
-      "message": "Successes: 1, Errors: 4, Final age: 36",
-      "timestamp": "2025-08-07T13:52:46.922629"
+      "message": "Successes: 1, Errors: 4, Final age: 34",
+      "timestamp": "2025-08-07T15:17:49.547014"
     },
     {
       "test": "Data Validation",
       "success": false,
       "message": "Validation errors: 6/6 scenarios",
-      "timestamp": "2025-08-07T13:52:46.925591"
+      "timestamp": "2025-08-07T15:17:49.552438"
     },
     {
       "test": "Plan Persistence",
       "success": true,
       "message": "Plan saved and loaded correctly",
-      "timestamp": "2025-08-07T13:52:46.963683"
+      "timestamp": "2025-08-07T15:17:49.594676"
     },
     {
       "test": "Progress Persistence",
       "success": true,
       "message": "Progress saved and loaded correctly",
-      "timestamp": "2025-08-07T13:52:46.963931"
+      "timestamp": "2025-08-07T15:17:49.594887"
     },
     {
       "test": "Chat Persistence",
       "success": true,
       "message": "Chat history: 2 messages",
-      "timestamp": "2025-08-07T13:52:46.964757"
+      "timestamp": "2025-08-07T15:17:49.596625"
     }
   ]
 }

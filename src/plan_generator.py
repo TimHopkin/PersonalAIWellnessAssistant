@@ -4,7 +4,10 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 from openai import OpenAI
 from dotenv import load_dotenv
-from data_utils import get_data_file_path
+try:
+    from .data_utils import get_data_file_path
+except ImportError:
+    from data_utils import get_data_file_path
 
 load_dotenv()
 

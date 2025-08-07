@@ -59,5 +59,28 @@
         "message": "I understand you want to modify your plan, but I need more specific instructions. For example, you could ask me to make workouts easier, add more yoga sessions, or change the duration of activities."
       }
     ]
+  },
+  "session_20250807_151749": {
+    "messages": [
+      {
+        "type": "system",
+        "timestamp": "2025-08-07T15:17:49.594921",
+        "message": "Chat session started",
+        "session_info": {
+          "started_at": "2025-08-07T15:17:49.594922",
+          "last_active": "2025-08-07T15:17:49.596410"
+        }
+      },
+      {
+        "type": "user",
+        "timestamp": "2025-08-07T15:17:49.595408",
+        "message": "Test message"
+      },
+      {
+        "type": "ai",
+        "timestamp": "2025-08-07T15:17:49.595944",
+        "message": "Test response"
+      }
+    ]
   }
 }

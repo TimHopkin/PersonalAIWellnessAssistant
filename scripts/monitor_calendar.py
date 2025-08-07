@@ -6,9 +6,15 @@ Real-time monitoring of calendar operations and health.
 
 import json
 import time
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any
+
+# Add the src directory to the path to import our modules
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+
 from calendar_integration import CalendarIntegration
 from plan_generator import PlanGenerator
 

@@ -7,7 +7,10 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from data_utils import get_data_file_path
+try:
+    from .data_utils import get_data_file_path
+except ImportError:
+    from data_utils import get_data_file_path
 
 
 class ChatManager:

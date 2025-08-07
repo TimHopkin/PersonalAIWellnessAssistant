@@ -10,10 +10,14 @@ import time
 import sys
 import os
 from flask import Flask
-from data_utils import migrate_existing_data, ensure_data_directory_exists, load_environment_variables, get_data_directory
-
-# Import the existing Flask app
-from app import app
+try:
+    from .data_utils import migrate_existing_data, ensure_data_directory_exists, load_environment_variables, get_data_directory
+    # Import the existing Flask app
+    from .app import app
+except ImportError:
+    from data_utils import migrate_existing_data, ensure_data_directory_exists, load_environment_variables, get_data_directory
+    # Import the existing Flask app
+    from app import app
 
 class DesktopApp:
     def __init__(self):

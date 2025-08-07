@@ -7,7 +7,10 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from data_utils import get_data_file_path
+try:
+    from .data_utils import get_data_file_path
+except ImportError:
+    from data_utils import get_data_file_path
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 

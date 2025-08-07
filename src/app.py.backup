@@ -10,17 +10,32 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
+from pathlib import Path
 
 # Environment variables are loaded by desktop_app.py
 
 # Import existing components
-from profile_manager import ProfileManager
-from plan_generator import PlanGenerator
-from calendar_integration import CalendarIntegration
-from progress_tracker import ProgressTracker
-from chat_manager import ChatManager
+try:
+    from .profile_manager import ProfileManager
+    from .plan_generator import PlanGenerator
+    from .calendar_integration import CalendarIntegration
+    from .progress_tracker import ProgressTracker
+    from .chat_manager import ChatManager
+except ImportError:
+    from profile_manager import ProfileManager
+    from plan_generator import PlanGenerator
+    from calendar_integration import CalendarIntegration
+    from progress_tracker import ProgressTracker
+    from chat_manager import ChatManager
 
-app = Flask(__name__)
+# Set up paths for templates and static files
+project_root = Path(__file__).parent.parent
+template_folder = project_root / 'templates'
+static_folder = project_root / 'static'
+
+app = Flask(__name__, 
+           template_folder=str(template_folder),
+           static_folder=str(static_folder))
 app.secret_key = os.environ.get('SECRET_KEY', 'wellness-assistant-secret-key')
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 CORS(app)
@@ -632,7 +647,6 @@ def prepare_chart_data(progress_data):
 @app.route('/settings')
 def settings_page():
     """Settings page."""
-    from data_utils import get_data_file_path
     
     # Check Google Calendar authentication status properly
     def check_calendar_auth():
@@ -672,6 +686,9 @@ def settings_page():
 @app.route('/debug-calendar')
 def debug_calendar():
     """Debug calendar authentication status."""
+    try:
+    from .data_utils import get_data_file_path
+except ImportError:
     from data_utils import get_data_file_path
     import os
     

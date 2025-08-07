@@ -3,7 +3,10 @@ import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 from pathlib import Path
-from data_utils import get_data_file_path
+try:
+    from .data_utils import get_data_file_path
+except ImportError:
+    from data_utils import get_data_file_path
 
 class ProfileManager:
     def __init__(self, profile_file: str = "profile.json"):

@@ -17,12 +17,15 @@ def get_data_directory() -> Path:
     Returns:
         Path: Persistent data directory path
     """
+    # Get the project root directory (parent of src)
+    project_root = Path(__file__).parent.parent
+    
     if getattr(sys, 'frozen', False):
         # Running as packaged app - use Documents folder
         data_dir = Path.home() / "Documents" / "Personal AI Wellness Assistant"
     else:
-        # Running in development - use current directory
-        data_dir = Path.cwd()
+        # Running in development - use data directory in project root
+        data_dir = project_root / "data"
     
     # Create directory if it doesn't exist
     data_dir.mkdir(parents=True, exist_ok=True)

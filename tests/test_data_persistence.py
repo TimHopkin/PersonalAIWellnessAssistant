@@ -13,14 +13,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any
 
-# Add the current directory to the path to import our modules
-sys.path.insert(0, str(Path(__file__).parent))
+# Add the src directory to the path to import our modules
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
 
 from profile_manager import ProfileManager
 from plan_generator import PlanGenerator
 from progress_tracker import ProgressTracker
 from chat_manager import ChatManager
-from data_utils import get_data_file_path, get_data_directory, get_app_info
+from data_utils import get_data_file_path, get_data_directory
 
 class DataPersistenceTest:
     def __init__(self):

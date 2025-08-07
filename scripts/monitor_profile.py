@@ -7,8 +7,14 @@ Real-time monitoring of profile changes to catch data loss issues.
 import json
 import time
 import hashlib
+import sys
 from datetime import datetime
 from pathlib import Path
+
+# Add the src directory to the path to import our modules
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root / "src"))
+
 from profile_manager import ProfileManager
 
 class ProfileMonitor:
