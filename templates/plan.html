@@ -13,6 +13,11 @@
                 <p class="text-muted mb-0">AI-powered personalized wellness plan tailored to your goals</p>
             </div>
             <div>
+                {% if plan %}
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#chatModal">
+                    <i class="fas fa-comments me-2"></i>Chat with AI
+                </button>
+                {% endif %}
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generatePlanModal">
                     <i class="fas fa-magic me-2"></i>Generate New Plan
                 </button>
@@ -265,6 +270,66 @@
         </div>
     </div>
 </div>
+
+<!-- Chat with AI Modal -->
+<div class="modal fade" id="chatModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-comments me-2"></i>Chat with AI to Update Your Plan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="height: 500px;">
+                <!-- Chat Messages Container -->
+                <div id="chatMessages" class="chat-messages p-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                    <!-- Welcome message -->
+                    <div class="message ai-message mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                    <i class="fas fa-robot text-white"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="bg-white p-3 rounded shadow-sm">
+                                    <p class="mb-0">Hi! I'm your AI wellness assistant. I can help you modify your current wellness plan. For example, you can ask me to:</p>
+                                    <ul class="mb-0 mt-2">
+                                        <li>"Make tomorrow's workout easier"</li>
+                                        <li>"Add more yoga sessions this week"</li>
+                                        <li>"Replace running with walking"</li>
+                                        <li>"Increase meditation time to 15 minutes"</li>
+                                    </ul>
+                                    <p class="mb-0 mt-2"><small class="text-muted">What would you like to change about your plan?</small></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="chat-input border-top p-3">
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <input type="text" id="chatInput" class="form-control" placeholder="Ask me to modify your wellness plan..." autocomplete="off" required>
+                            <button type="submit" class="btn btn-primary" id="sendBtn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <small class="text-muted me-auto">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Changes will be previewed before applying to your plan
+                </small>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -316,6 +381,8 @@ function scheduleDay(dayNumber) {
     // Redirect to schedule page with day parameter
     window.location.href = `/schedule?day=${dayNumber}`;
 }
+
+// Chat functionality is now handled by main.js
 
 function showToast(message, type) {
     const toastHtml = `

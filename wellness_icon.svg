@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main gradient -->
+    <radialGradient id="mainGradient" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#29B6F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0288D1;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Accent gradient -->
+    <radialGradient id="accentGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#66BB6A;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#43A047;stop-opacity:0.7" />
+    </radialGradient>
+    
+    <!-- Inner glow -->
+    <radialGradient id="innerGlow" cx="50%" cy="50%" r="40%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+    
+    <!-- Shadow -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="480" fill="url(#mainGradient)" filter="url(#shadow)"/>
+  
+  <!-- Main wellness symbol - abstract lotus/zen design -->
+  <g transform="translate(512,512)">
+    <!-- Central circle -->
+    <circle cx="0" cy="0" r="80" fill="url(#innerGlow)"/>
+    
+    <!-- Lotus petals/wellness curves -->
+    <g opacity="0.8">
+      <!-- Top curves -->
+      <path d="M -120,-60 Q 0,-200 120,-60 Q 0,-100 -120,-60 Z" fill="url(#accentGradient)" opacity="0.7"/>
+      <path d="M -80,-80 Q 0,-160 80,-80 Q 0,-120 -80,-80 Z" fill="#FFFFFF" opacity="0.2"/>
+      
+      <!-- Side curves -->
+      <g transform="rotate(120)">
+        <path d="M -120,-60 Q 0,-200 120,-60 Q 0,-100 -120,-60 Z" fill="url(#accentGradient)" opacity="0.7"/>
+        <path d="M -80,-80 Q 0,-160 80,-80 Q 0,-120 -80,-80 Z" fill="#FFFFFF" opacity="0.2"/>
+      </g>
+      
+      <g transform="rotate(240)">
+        <path d="M -120,-60 Q 0,-200 120,-60 Q 0,-100 -120,-60 Z" fill="url(#accentGradient)" opacity="0.7"/>
+        <path d="M -80,-80 Q 0,-160 80,-80 Q 0,-120 -80,-80 Z" fill="#FFFFFF" opacity="0.2"/>
+      </g>
+    </g>
+    
+    <!-- Center wellness dot -->
+    <circle cx="0" cy="0" r="40" fill="#FFFFFF" opacity="0.9"/>
+    <circle cx="0" cy="0" r="25" fill="url(#accentGradient)"/>
+    <circle cx="0" cy="0" r="15" fill="#FFFFFF" opacity="0.6"/>
+  </g>
+  
+  <!-- Subtle outer ring -->
+  <circle cx="512" cy="512" r="480" fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.3"/>
+</svg>

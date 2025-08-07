@@ -4,12 +4,13 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
+from data_utils import get_data_file_path
 
 load_dotenv()
 
 class ProgressTracker:
     def __init__(self, progress_file: str = "progress_data.json"):
-        self.progress_file = progress_file
+        self.progress_file = get_data_file_path(progress_file)
         self.garmin_client_id = os.getenv('GARMIN_CLIENT_ID')
         self.garmin_client_secret = os.getenv('GARMIN_CLIENT_SECRET')
         self.renpho_email = os.getenv('RENPHO_EMAIL')
@@ -363,7 +364,7 @@ class ProgressTracker:
     
     def load_progress(self) -> Dict[str, Any]:
         """Load progress data from file."""
-        if os.path.exists(self.progress_file):
+        if self.progress_file.exists():
             try:
                 with open(self.progress_file, 'r') as f:
                     return json.load(f)

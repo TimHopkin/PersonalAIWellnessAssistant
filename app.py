@@ -11,14 +11,18 @@ import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
+# Environment variables are loaded by desktop_app.py
+
 # Import existing components
 from profile_manager import ProfileManager
 from plan_generator import PlanGenerator
 from calendar_integration import CalendarIntegration
 from progress_tracker import ProgressTracker
+from chat_manager import ChatManager
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'wellness-assistant-secret-key')
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 CORS(app)
 
 # Add template filters for date formatting
@@ -85,6 +89,11 @@ profile_manager = ProfileManager()
 plan_generator = PlanGenerator()
 calendar_integration = CalendarIntegration()
 progress_tracker = ProgressTracker()
+chat_manager = ChatManager()
+
+# Initialize calendar authentication on startup
+print("🗓️  Initializing Google Calendar integration...")
+calendar_integration.authenticate()
 
 @app.route('/')
 def dashboard():
@@ -194,7 +203,13 @@ def schedule_plan():
         start_date_str = request.form.get('start_date')
         start_date = datetime.fromisoformat(start_date_str) if start_date_str else datetime.now() + timedelta(days=1)
         
+        # Ensure calendar is authenticated
+        print("🗓️  Authenticating with Google Calendar...")
+        if not calendar_integration.authenticate():
+            return jsonify({'error': 'Failed to authenticate with Google Calendar'}), 500
+        
         # Schedule the plan
+        print(f"📅 Scheduling {len(plan.get('days', []))} days of activities...")
         result = calendar_integration.schedule_wellness_plan(plan, start_date)
         
         return jsonify({
@@ -310,6 +325,133 @@ def api_progress_chart_data():
     progress_data = progress_tracker.load_progress()
     chart_data = prepare_chart_data(progress_data)
     return jsonify(chart_data)
+
+@app.route('/api/chat-update-plan', methods=['POST'])
+def api_chat_update_plan():
+    """API endpoint for chatting with AI to update wellness plan."""
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        session_id = data.get('session_id')
+        
+        if not message:
+            return jsonify({'success': False, 'error': 'Message is required'}), 400
+        
+        # Start or resume chat session
+        if not session_id:
+            session_id = chat_manager.start_new_session()
+        
+        # Add user message to chat history
+        chat_manager.add_user_message(message, session_id)
+        
+        # Load current plan
+        plan = plan_generator.load_plan()
+        if not plan:
+            error_response = 'No wellness plan found. Please generate a plan first.'
+            chat_manager.add_ai_response(error_response, [], session_id)
+            return jsonify({
+                'success': False, 
+                'error': error_response,
+                'session_id': session_id
+            }), 400
+        
+        # Load user profile for context
+        profile = profile_manager.load_profile()
+        
+        # Get conversation context
+        conversation_context = chat_manager.get_conversation_context(session_id)
+        
+        # Process the chat message and get AI response
+        try:
+            response_data = plan_generator.process_chat_update(message, plan, profile, conversation_context)
+            
+            # Add AI response to chat history
+            chat_manager.add_ai_response(
+                response_data.get('response', 'Plan updated successfully!'),
+                response_data.get('proposed_changes', []),
+                session_id
+            )
+            
+            return jsonify({
+                'success': True,
+                'response': response_data.get('response', 'Plan updated successfully!'),
+                'proposed_changes': response_data.get('proposed_changes'),
+                'plan_modified': response_data.get('plan_modified', False),
+                'session_id': session_id
+            })
+        except Exception as e:
+            error_response = 'Sorry, I encountered an error processing your request. Please try again.'
+            chat_manager.add_ai_response(error_response, [], session_id)
+            print(f"Error processing chat update: {e}")
+            return jsonify({
+                'success': False,
+                'error': error_response,
+                'session_id': session_id
+            }), 500
+        
+    except Exception as e:
+        print(f"Error in chat update API: {e}")
+        return jsonify({'success': False, 'error': 'Invalid request'}), 500
+
+@app.route('/api/chat-sessions')
+def api_chat_sessions():
+    """API endpoint to get active chat sessions."""
+    try:
+        # Clean up old sessions first
+        cleaned_count = chat_manager.cleanup_old_sessions()
+        if cleaned_count > 0:
+            print(f"Cleaned up {cleaned_count} expired chat sessions")
+        
+        active_sessions = chat_manager.list_active_sessions()
+        return jsonify({
+            'success': True,
+            'sessions': active_sessions,
+            'total_sessions': len(active_sessions)
+        })
+    except Exception as e:
+        print(f"Error getting chat sessions: {e}")
+        return jsonify({'success': False, 'error': 'Failed to retrieve chat sessions'}), 500
+
+@app.route('/api/plan-backups')
+def api_plan_backups():
+    """API endpoint to get available plan backups."""
+    try:
+        backups = plan_generator.list_plan_backups()
+        return jsonify({
+            'success': True,
+            'backups': backups,
+            'total_backups': len(backups)
+        })
+    except Exception as e:
+        print(f"Error getting plan backups: {e}")
+        return jsonify({'success': False, 'error': 'Failed to retrieve plan backups'}), 500
+
+@app.route('/api/restore-plan-backup', methods=['POST'])
+def api_restore_plan_backup():
+    """API endpoint to restore a plan from backup."""
+    try:
+        data = request.get_json()
+        backup_filename = data.get('backup_filename', '').strip()
+        
+        if not backup_filename:
+            return jsonify({'success': False, 'error': 'Backup filename is required'}), 400
+        
+        success = plan_generator.restore_plan_backup(backup_filename)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Plan restored from backup: {backup_filename}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to restore plan from backup'
+            }), 500
+            
+    except Exception as e:
+        print(f"Error restoring plan backup: {e}")
+        return jsonify({'success': False, 'error': 'Failed to restore plan backup'}), 500
 
 def calculate_dashboard_stats(profile, plan, progress_data):
     """Calculate statistics for the dashboard."""
@@ -435,15 +577,89 @@ def prepare_chart_data(progress_data):
 @app.route('/settings')
 def settings_page():
     """Settings page."""
+    from data_utils import get_data_file_path
+    
+    # Check Google Calendar authentication status properly
+    def check_calendar_auth():
+        # Check if credentials file exists
+        if not get_data_file_path('credentials.json').exists():
+            return False
+        
+        # Check if we have a valid authentication token
+        token_file = get_data_file_path('token.pickle')
+        if not token_file.exists():
+            return False
+            
+        # Try to verify the calendar service actually works
+        try:
+            from calendar_integration import CalendarIntegration
+            test_calendar = CalendarIntegration()
+            if test_calendar.authenticate() and test_calendar.service:
+                # Test a simple API call
+                test_calendar.service.calendarList().list(maxResults=1).execute()
+                return True
+        except Exception as e:
+            print(f"Calendar auth test failed: {e}")
+            return False
+        
+        return False
+    
     # Check API status
     api_status = {
-        'grok_api': bool(os.getenv('GROK_API_KEY')),
-        'google_calendar': os.path.exists('credentials.json'),
-        'garmin': bool(os.getenv('GARMIN_CLIENT_ID')),
-        'renpho': bool(os.getenv('RENPHO_EMAIL'))
+        'grok_api': bool(os.getenv('GROK_API_KEY')) and os.getenv('GROK_API_KEY') != 'your_grok_api_key_here',
+        'google_calendar': check_calendar_auth(),
+        'garmin': bool(os.getenv('GARMIN_CLIENT_ID')) and os.getenv('GARMIN_CLIENT_ID') != 'your_garmin_client_id_here',
+        'renpho': bool(os.getenv('RENPHO_EMAIL')) and os.getenv('RENPHO_EMAIL') != 'your_renpho_email@example.com'
     }
     
     return render_template('settings.html', api_status=api_status)
+
+@app.route('/debug-calendar')
+def debug_calendar():
+    """Debug calendar authentication status."""
+    from data_utils import get_data_file_path
+    import os
+    
+    debug_info = {
+        'credentials_file': str(get_data_file_path('credentials.json')),
+        'credentials_exists': get_data_file_path('credentials.json').exists(),
+        'token_file': str(get_data_file_path('token.pickle')),
+        'token_exists': get_data_file_path('token.pickle').exists(),
+        'data_directory': str(get_data_file_path('').parent),
+        'data_dir_writable': os.access(get_data_file_path('').parent, os.W_OK),
+        'calendar_service_status': 'None'
+    }
+    
+    # Test calendar authentication
+    try:
+        calendar_integration.authenticate()
+        if calendar_integration.service:
+            debug_info['calendar_service_status'] = 'Active'
+            # Try a test API call
+            try:
+                cal_list = calendar_integration.service.calendarList().list(maxResults=1).execute()
+                debug_info['api_test'] = 'Success'
+                debug_info['calendar_count'] = len(cal_list.get('items', []))
+            except Exception as e:
+                debug_info['api_test'] = f'Failed: {e}'
+        else:
+            debug_info['calendar_service_status'] = 'Demo Mode'
+    except Exception as e:
+        debug_info['calendar_service_status'] = f'Error: {e}'
+    
+    return jsonify(debug_info)
+
+@app.route('/reset-calendar-auth', methods=['POST'])
+def reset_calendar_auth():
+    """Reset calendar authentication to force re-auth."""
+    try:
+        success = calendar_integration.clear_authentication()
+        if success:
+            return jsonify({'success': True, 'message': 'Authentication cleared. Try scheduling again to re-authenticate.'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to clear authentication'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {e}'})
 
 @app.route('/favicon.ico')
 def favicon():

@@ -1,15 +1,16 @@
 import json
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from openai import OpenAI
 from dotenv import load_dotenv
+from data_utils import get_data_file_path
 
 load_dotenv()
 
 class PlanGenerator:
     def __init__(self, plan_file: str = "wellness_plan.json"):
-        self.plan_file = plan_file
+        self.plan_file = get_data_file_path(plan_file)
         self.client = None
         
         # Only initialize OpenAI client if API key is available
@@ -248,7 +249,7 @@ Return ONLY valid JSON in this exact format:
     
     def load_plan(self) -> Optional[Dict[str, Any]]:
         """Load existing plan from file."""
-        if os.path.exists(self.plan_file):
+        if self.plan_file.exists():
             try:
                 with open(self.plan_file, 'r') as f:
                     return json.load(f)
@@ -257,9 +258,128 @@ Return ONLY valid JSON in this exact format:
         return None
     
     def save_plan(self, plan: Dict[str, Any]) -> None:
-        """Save plan to file."""
+        """Save plan to file and create backup version."""
+        # Create backup of current plan if it exists
+        self._create_plan_backup()
+        
         with open(self.plan_file, 'w') as f:
             json.dump(plan, f, indent=2)
+    
+    def _create_plan_backup(self) -> None:
+        """Create a backup of the current plan."""
+        if not self.plan_file.exists():
+            return
+        
+        try:
+            # Create backup directory
+            backup_dir = self.plan_file.parent / 'backups'
+            backup_dir.mkdir(exist_ok=True)
+            
+            # Load current plan to get timestamp
+            current_plan = self.load_plan()
+            if not current_plan:
+                return
+            
+            # Create backup filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f'wellness_plan_backup_{timestamp}.json'
+            backup_path = backup_dir / backup_filename
+            
+            # Copy current plan to backup
+            import shutil
+            shutil.copy2(self.plan_file, backup_path)
+            
+            # Limit number of backups (keep last 10)
+            self._cleanup_old_backups(backup_dir, max_backups=10)
+            
+        except Exception as e:
+            print(f"Warning: Could not create plan backup: {e}")
+    
+    def _cleanup_old_backups(self, backup_dir, max_backups: int = 10) -> None:
+        """Remove old backup files, keeping only the most recent ones."""
+        try:
+            backup_files = list(backup_dir.glob('wellness_plan_backup_*.json'))
+            if len(backup_files) <= max_backups:
+                return
+            
+            # Sort by modification time (newest first)
+            backup_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            
+            # Remove old backups
+            for backup_file in backup_files[max_backups:]:
+                backup_file.unlink()
+                print(f"Removed old backup: {backup_file.name}")
+                
+        except Exception as e:
+            print(f"Warning: Could not cleanup old backups: {e}")
+    
+    def list_plan_backups(self) -> List[Dict[str, Any]]:
+        """List available plan backups."""
+        backup_dir = self.plan_file.parent / 'backups'
+        if not backup_dir.exists():
+            return []
+        
+        backups = []
+        try:
+            backup_files = list(backup_dir.glob('wellness_plan_backup_*.json'))
+            backup_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            
+            for backup_file in backup_files:
+                try:
+                    # Extract timestamp from filename
+                    timestamp_str = backup_file.stem.replace('wellness_plan_backup_', '')
+                    timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                    
+                    # Load backup to get plan info
+                    with open(backup_file, 'r') as f:
+                        backup_plan = json.load(f)
+                    
+                    backups.append({
+                        'filename': backup_file.name,
+                        'path': str(backup_file),
+                        'created_at': timestamp.isoformat(),
+                        'plan_name': backup_plan.get('plan_name', 'Unknown Plan'),
+                        'plan_duration': len(backup_plan.get('days', [])),
+                        'size_bytes': backup_file.stat().st_size
+                    })
+                    
+                except Exception as e:
+                    print(f"Error processing backup {backup_file}: {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"Error listing backups: {e}")
+        
+        return backups
+    
+    def restore_plan_backup(self, backup_filename: str) -> bool:
+        """Restore a plan from backup."""
+        backup_dir = self.plan_file.parent / 'backups'
+        backup_path = backup_dir / backup_filename
+        
+        if not backup_path.exists():
+            print(f"Backup file not found: {backup_filename}")
+            return False
+        
+        try:
+            # Load the backup
+            with open(backup_path, 'r') as f:
+                backup_plan = json.load(f)
+            
+            # Add restoration metadata
+            backup_plan['restored_at'] = datetime.now().isoformat()
+            backup_plan['restored_from'] = backup_filename
+            
+            # Save as current plan
+            with open(self.plan_file, 'w') as f:
+                json.dump(backup_plan, f, indent=2)
+            
+            print(f"Plan restored from backup: {backup_filename}")
+            return True
+            
+        except Exception as e:
+            print(f"Error restoring backup: {e}")
+            return False
     
     def display_plan_summary(self, plan: Dict[str, Any]) -> None:
         """Display a summary of the wellness plan."""
@@ -325,6 +445,219 @@ Return ONLY valid JSON in this exact format:
         self.save_plan(current_plan)
         print("Plan adapted and saved!")
         return current_plan
+    
+    def process_chat_update(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any], conversation_context: List[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Process a chat message to update the wellness plan."""
+        if not self.client:
+            return self._process_chat_fallback(message, current_plan, profile)
+        
+        # Build context for the AI
+        context = self._build_chat_context(message, current_plan, profile, conversation_context)
+        
+        try:
+            print(f"🤖 Processing plan update request: {message[:50]}...")
+            response = self.client.chat.completions.create(
+                model="grok-beta",
+                messages=[{
+                    "role": "system",
+                    "content": """You are a professional wellness coach AI assistant. You help users modify their existing wellness plans based on their requests. 
+                    
+                    Your responses should:
+                    1. Be conversational and encouraging
+                    2. Explain what changes you're making and why
+                    3. Suggest improvements when appropriate
+                    4. Always prioritize user safety and realistic expectations
+                    
+                    Return your response as JSON with this structure:
+                    {
+                        "response": "Your conversational response to the user",
+                        "changes_made": ["List of specific changes made"],
+                        "plan_modified": true/false,
+                        "modified_plan": {...} // The updated plan if modified
+                    }
+                    
+                    If you cannot fulfill the request safely or it's unclear, ask for clarification."""
+                }, {
+                    "role": "user",
+                    "content": context
+                }],
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            response_content = response.choices[0].message.content
+            
+            # Clean up the response to extract JSON
+            if "```json" in response_content:
+                response_content = response_content.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_content:
+                response_content = response_content.split("```")[1].split("```")[0].strip()
+            
+            response_data = json.loads(response_content)
+            
+            # If plan was modified, save it
+            if response_data.get('plan_modified') and response_data.get('modified_plan'):
+                modified_plan = response_data['modified_plan']
+                # Preserve metadata
+                modified_plan['generated_at'] = current_plan.get('generated_at')
+                modified_plan['profile_snapshot'] = current_plan.get('profile_snapshot')
+                modified_plan['last_modified'] = datetime.now().isoformat()
+                modified_plan['modification_history'] = current_plan.get('modification_history', [])
+                modified_plan['modification_history'].append({
+                    'timestamp': datetime.now().isoformat(),
+                    'request': message,
+                    'changes': response_data.get('changes_made', [])
+                })
+                
+                self.save_plan(modified_plan)
+                print("Plan updated and saved!")
+            
+            return {
+                'response': response_data.get('response', 'Plan updated successfully!'),
+                'proposed_changes': response_data.get('changes_made', []),
+                'plan_modified': response_data.get('plan_modified', False)
+            }
+            
+        except json.JSONDecodeError as e:
+            print(f"Error parsing AI response: {e}")
+            return self._process_chat_fallback(message, current_plan, profile)
+        except Exception as e:
+            print(f"Error processing chat update: {e}")
+            return self._process_chat_fallback(message, current_plan, profile)
+    
+    def _build_chat_context(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any], conversation_context: List[Dict[str, Any]] = None) -> str:
+        """Build context for the AI chat update request."""
+        # Add conversation history if available
+        context_intro = ""
+        if conversation_context and len(conversation_context) > 0:
+            context_intro = "Recent Conversation History:\n"
+            for msg in conversation_context[-5:]:  # Last 5 messages for context
+                msg_type = "User" if msg.get('type') == 'user' else "AI"
+                context_intro += f"{msg_type}: {msg.get('message', '')}\n"
+            context_intro += f"\nLatest User Request: \"{message}\"\n\n"
+        else:
+            context_intro = f"User Request: \"{message}\"\n\n"
+        
+        # Summarize current plan
+        plan_summary = f"Current Plan: {current_plan.get('plan_name', 'Wellness Plan')}\n"
+        plan_summary += f"Duration: {len(current_plan.get('days', []))} days\n"
+        plan_summary += f"Generated: {current_plan.get('generated_at', 'Unknown')[:10]}\n\n"
+        
+        # Add day summaries
+        plan_summary += "Current Schedule:\n"
+        for day in current_plan.get('days', [])[:7]:  # Limit to first 7 days for context
+            activities = day.get('activities', [])
+            activity_list = []
+            for activity in activities:
+                duration = activity.get('duration_minutes', 0)
+                activity_type = activity.get('type', '').replace('_', ' ').title()
+                activity_list.append(f"{activity_type} ({duration}min)")
+            
+            plan_summary += f"Day {day.get('day', 0)}: {', '.join(activity_list) if activity_list else 'Rest day'}\n"
+        
+        # Add user preferences context
+        user_context = ""
+        if profile:
+            fitness_level = profile.get('fitness_level', 'unknown')
+            goals = profile.get('goals', 'not specified')
+            constraints = profile.get('constraints', 'none')
+            
+            user_context = f"\nUser Profile:\n"
+            user_context += f"Fitness Level: {fitness_level}\n"
+            user_context += f"Goals: {goals}\n"
+            user_context += f"Constraints: {constraints}\n"
+            
+            activity_prefs = profile.get('activity_preferences', {})
+            liked_activities = [k.replace('_', ' ') for k, v in activity_prefs.items() if v]
+            if liked_activities:
+                user_context += f"Preferred Activities: {', '.join(liked_activities)}\n"
+        
+        context = f"""{context_intro}{plan_summary}
+{user_context}
+
+Please modify the current wellness plan based on the user's request. Consider the conversation history if provided. Make specific, safe changes that align with their fitness level and preferences. If the request is unclear or potentially unsafe, ask for clarification instead of making changes."""
+        
+        return context
+    
+    def _process_chat_fallback(self, message: str, current_plan: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
+        """Fallback chat processing when AI is not available."""
+        print("Processing chat request in fallback mode...")
+        
+        # Simple keyword-based modifications
+        message_lower = message.lower()
+        changes_made = []
+        plan_modified = False
+        
+        # Basic intensity modifications
+        if any(word in message_lower for word in ['easier', 'reduce', 'less']):
+            # Reduce intensity and duration
+            for day in current_plan.get('days', []):
+                for activity in day.get('activities', []):
+                    if activity.get('intensity') == 'high':
+                        activity['intensity'] = 'moderate'
+                        changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to moderate")
+                        plan_modified = True
+                    elif activity.get('intensity') == 'moderate':
+                        activity['intensity'] = 'low'
+                        changes_made.append(f"Reduced {activity.get('type', 'activity')} intensity to low")
+                        plan_modified = True
+                    
+                    # Reduce duration by 25%
+                    current_duration = activity.get('duration_minutes', 20)
+                    if current_duration > 10:
+                        new_duration = max(10, int(current_duration * 0.75))
+                        activity['duration_minutes'] = new_duration
+                        changes_made.append(f"Reduced {activity.get('type', 'activity')} duration to {new_duration} minutes")
+                        plan_modified = True
+        
+        elif any(word in message_lower for word in ['harder', 'increase', 'more']):
+            # Increase intensity and duration
+            for day in current_plan.get('days', []):
+                for activity in day.get('activities', []):
+                    if activity.get('intensity') == 'low':
+                        activity['intensity'] = 'moderate'
+                        changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to moderate")
+                        plan_modified = True
+                    elif activity.get('intensity') == 'moderate':
+                        activity['intensity'] = 'high'
+                        changes_made.append(f"Increased {activity.get('type', 'activity')} intensity to high")
+                        plan_modified = True
+                    
+                    # Increase duration by 25%
+                    current_duration = activity.get('duration_minutes', 20)
+                    new_duration = int(current_duration * 1.25)
+                    activity['duration_minutes'] = new_duration
+                    changes_made.append(f"Increased {activity.get('type', 'activity')} duration to {new_duration} minutes")
+                    plan_modified = True
+        
+        # Save modified plan
+        if plan_modified:
+            current_plan['last_modified'] = datetime.now().isoformat()
+            current_plan['modification_history'] = current_plan.get('modification_history', [])
+            current_plan['modification_history'].append({
+                'timestamp': datetime.now().isoformat(),
+                'request': message,
+                'changes': changes_made
+            })
+            self.save_plan(current_plan)
+        
+        if not changes_made:
+            return {
+                'response': "I understand you want to modify your plan, but I need more specific instructions. For example, you could ask me to make workouts easier, add more yoga sessions, or change the duration of activities.",
+                'proposed_changes': [],
+                'plan_modified': False
+            }
+        
+        response_text = f"I've made the following changes to your wellness plan:\n\n"
+        for change in changes_made:
+            response_text += f"• {change}\n"
+        response_text += f"\nYour plan has been updated and saved. The changes will take effect immediately."
+        
+        return {
+            'response': response_text,
+            'proposed_changes': changes_made,
+            'plan_modified': plan_modified
+        }
 
 if __name__ == "__main__":
     generator = PlanGenerator()

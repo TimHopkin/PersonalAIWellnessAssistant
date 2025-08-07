@@ -1,0 +1,63 @@
+{
+  "session_20250807_132803": {
+    "messages": [
+      {
+        "type": "system",
+        "timestamp": "2025-08-07T13:28:03.790611",
+        "message": "Chat session started",
+        "session_info": {
+          "started_at": "2025-08-07T13:28:03.790613",
+          "last_active": "2025-08-07T13:28:04.553974"
+        }
+      },
+      {
+        "type": "system",
+        "timestamp": "2025-08-07T13:28:03.806927",
+        "message": "Chat session started",
+        "session_info": {
+          "started_at": "2025-08-07T13:28:03.806929",
+          "last_active": "2025-08-07T13:28:03.806930"
+        }
+      },
+      {
+        "type": "user",
+        "timestamp": "2025-08-07T13:28:03.807150",
+        "message": "Make my workouts easier"
+      },
+      {
+        "type": "ai",
+        "timestamp": "2025-08-07T13:28:04.553348",
+        "message": "I've made the following changes to your wellness plan:\n\n\u2022 Reduced walking duration to 16 minutes\n\u2022 Reduced stretching duration to 11 minutes\n\u2022 Reduced bodyweight_exercises duration to 13 minutes\n\u2022 Reduced yoga duration to 11 minutes\n\nYour plan has been updated and saved. The changes will take effect immediately.",
+        "changes_made": [
+          "Reduced walking duration to 16 minutes",
+          "Reduced stretching duration to 11 minutes",
+          "Reduced bodyweight_exercises duration to 13 minutes",
+          "Reduced yoga duration to 11 minutes"
+        ]
+      }
+    ]
+  },
+  "session_20250807_133348": {
+    "messages": [
+      {
+        "type": "system",
+        "timestamp": "2025-08-07T13:33:48.162502",
+        "message": "Chat session started",
+        "session_info": {
+          "started_at": "2025-08-07T13:33:48.162505",
+          "last_active": "2025-08-07T13:33:48.575655"
+        }
+      },
+      {
+        "type": "user",
+        "timestamp": "2025-08-07T13:33:48.163372",
+        "message": "test"
+      },
+      {
+        "type": "ai",
+        "timestamp": "2025-08-07T13:33:48.575224",
+        "message": "I understand you want to modify your plan, but I need more specific instructions. For example, you could ask me to make workouts easier, add more yoga sessions, or change the duration of activities."
+      }
+    ]
+  }
+}

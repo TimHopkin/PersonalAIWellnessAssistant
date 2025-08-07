@@ -1,0 +1,109 @@
+NETLIFY CONVERSION PLAN - Personal AI Wellness Assistant
+
+## Problem Analysis:
+The current application is a Flask backend that requires Python server-side processing. Netlify only hosts static sites (HTML, CSS, JS), so we need to convert the Flask app to a client-side JavaScript application.
+
+## Conversion Strategy:
+
+### Phase 1: Create Static HTML Files
+1. Convert Jinja2 templates to static HTML
+   - Remove Flask template syntax ({% %}, {{ }})
+   - Create standalone HTML files for each page
+   - Update navigation to use relative links instead of Flask routes
+
+2. Create index.html as landing page
+   - Convert dashboard.html to index.html
+   - Remove Flask template inheritance and variables
+
+### Phase 2: Client-Side Data Management
+1. Replace Python backend with JavaScript
+   - Convert ProfileManager to localStorage-based JS class
+   - Convert PlanGenerator to client-side AI API calls
+   - Convert ProgressTracker to localStorage data management
+   - Remove Flask routes and replace with JavaScript functions
+
+2. Implement Local Storage System
+   - Store user profile in localStorage
+   - Store wellness plans in localStorage
+   - Store progress data in localStorage
+   - Create JSON-based data persistence
+
+### Phase 3: API Integration Updates
+1. Convert server-side API calls to client-side
+   - Make Grok AI API calls directly from browser (with CORS)
+   - Handle Google Calendar API with OAuth2 client-side flow
+   - Remove Python dependency for API integrations
+
+2. Create client-side fallback systems
+   - Local plan generation without AI when API unavailable
+   - Demo mode for calendar when Google APIs not configured
+
+### Phase 4: Static Asset Organization
+1. Create proper static file structure
+   /
+   ├── index.html (dashboard)
+   ├── profile.html
+   ├── plan.html  
+   ├── schedule.html
+   ├── progress.html
+   ├── reports.html
+   ├── settings.html
+   ├── assets/
+   │   ├── css/
+   │   ├── js/
+   │   └── img/
+   └── _redirects (Netlify routing)
+
+2. Update all asset references
+   - Change Flask url_for() to relative paths
+   - Update CSS/JS imports to static paths
+   - Fix favicon and image references
+
+### Phase 5: Client-Side Routing
+1. Implement single-page app navigation
+   - Use JavaScript to handle page transitions
+   - Create smooth navigation between sections
+   - Maintain browser history with pushState
+
+2. Add Netlify configuration
+   - Create _redirects file for proper routing
+   - Configure netlify.toml if needed
+
+## Files to Create/Modify:
+
+### New Files:
+- index.html (converted dashboard)
+- assets/js/app.js (main application logic)
+- assets/js/profile-manager.js (localStorage profile management)  
+- assets/js/plan-generator.js (client-side plan generation)
+- assets/js/progress-tracker.js (localStorage progress tracking)
+- _redirects (Netlify routing configuration)
+
+### Convert Existing:
+- All template files → static HTML files
+- Remove Flask template syntax
+- Update static asset paths
+- Convert Python logic to JavaScript
+
+## Implementation Approach:
+1. Keep existing UI/UX design - maintain Bootstrap styling and layout
+2. Preserve all functionality - ensure feature parity with Flask version
+3. Add offline capability - work without internet connection
+4. Maintain data persistence - use localStorage for user data
+5. Enable API integrations - client-side Grok and Google Calendar APIs
+
+This conversion will result in a fully functional static web application that can be deployed to Netlify while maintaining all the original features and functionality.
+
+## Technical Notes:
+- Current Flask app uses server-side templates and Python backend
+- Need to convert all server-side logic to client-side JavaScript
+- API calls currently go through Flask routes, need direct browser calls
+- Data currently stored in JSON files, need localStorage implementation
+- Template rendering currently server-side, need client-side rendering
+
+## Potential Challenges:
+- CORS issues with external APIs
+- Client-side API key exposure (need secure handling)
+- Browser localStorage limitations
+- Complex template logic conversion
+- Maintaining responsive design and functionality

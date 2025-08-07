@@ -7,18 +7,20 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from data_utils import get_data_file_path
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 class CalendarIntegration:
     def __init__(self, credentials_file: str = "credentials.json", token_file: str = "token.pickle"):
-        self.credentials_file = credentials_file
-        self.token_file = token_file
+        self.credentials_file = get_data_file_path(credentials_file)
+        self.token_file = get_data_file_path(token_file)
         self.service = None
         
     def authenticate(self) -> bool:
         """Authenticate with Google Calendar API."""
-        if not os.path.exists(self.credentials_file):
+        print(f"🔍 Looking for credentials at: {self.credentials_file}")
+        if not self.credentials_file.exists():
             print("⚠️  Google Calendar credentials not found - using demo mode")
             print("📅 Calendar features will show mock scheduling results")
             self.service = None
@@ -27,9 +29,17 @@ class CalendarIntegration:
         creds = None
         
         # Load existing token
-        if os.path.exists(self.token_file):
-            with open(self.token_file, 'rb') as token:
-                creds = pickle.load(token)
+        if self.token_file.exists():
+            print(f"🔍 Found existing token file: {self.token_file}")
+            try:
+                with open(self.token_file, 'rb') as token:
+                    creds = pickle.load(token)
+                print("✅ Successfully loaded existing authentication token")
+            except Exception as e:
+                print(f"❌ Failed to load token file: {e}")
+                creds = None
+        else:
+            print(f"🔍 No existing token file found at: {self.token_file}")
         
         # If no valid credentials, get new ones
         if not creds or not creds.valid:
@@ -42,26 +52,50 @@ class CalendarIntegration:
             
             if not creds:
                 try:
-                    flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, SCOPES)
+                    print("🔐 Starting OAuth2 authentication flow...")
+                    print("🌐 A browser window should open for Google login...")
+                    flow = InstalledAppFlow.from_client_secrets_file(str(self.credentials_file), SCOPES)
                     creds = flow.run_local_server(port=0)
+                    print("✅ OAuth2 authentication completed successfully!")
                 except Exception as e:
-                    print(f"Error during authentication: {e}")
+                    print(f"❌ Error during authentication: {e}")
                     print("⚠️  Continuing in demo mode without calendar integration")
                     self.service = None
                     return True
             
             # Save credentials for future use
-            with open(self.token_file, 'wb') as token:
-                pickle.dump(creds, token)
+            try:
+                print(f"💾 Saving authentication token to: {self.token_file}")
+                with open(self.token_file, 'wb') as token:
+                    pickle.dump(creds, token)
+                print(f"✅ Token saved successfully! File exists: {self.token_file.exists()}")
+            except Exception as e:
+                print(f"❌ Failed to save token: {e}")
+                print(f"Token file path: {self.token_file}")
+                print(f"Parent directory exists: {self.token_file.parent.exists()}")
+                print(f"Parent directory writable: {os.access(self.token_file.parent, os.W_OK)}")
         
         try:
             self.service = build('calendar', 'v3', credentials=creds)
+            print("🗓️  Google Calendar service initialized successfully!")
             return True
         except Exception as e:
-            print(f"Error building calendar service: {e}")
+            print(f"❌ Error building calendar service: {e}")
             print("⚠️  Continuing in demo mode without calendar integration")
             self.service = None
             return True
+    
+    def clear_authentication(self):
+        """Clear existing authentication tokens to force re-authentication."""
+        try:
+            if self.token_file.exists():
+                self.token_file.unlink()
+                print(f"🗑️  Cleared authentication token: {self.token_file}")
+            self.service = None
+            return True
+        except Exception as e:
+            print(f"❌ Failed to clear authentication: {e}")
+            return False
     
     def get_busy_times(self, start_date: datetime, end_date: datetime, calendar_id: str = 'primary') -> List[Dict[str, Any]]:
         """Get busy time slots from calendar."""
@@ -272,7 +306,8 @@ class CalendarIntegration:
         }
         
         # Save scheduling results
-        with open('scheduling_results.json', 'w') as f:
+        results_file = get_data_file_path('scheduling_results.json')
+        with open(results_file, 'w') as f:
             json.dump(result, f, indent=2, default=str)
         
         return result

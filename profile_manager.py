@@ -2,10 +2,12 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional
+from pathlib import Path
+from data_utils import get_data_file_path
 
 class ProfileManager:
     def __init__(self, profile_file: str = "profile.json"):
-        self.profile_file = profile_file
+        self.profile_file = get_data_file_path(profile_file)
         
     def get_profile(self) -> Dict[str, Any]:
         """Collect user profile information through command-line input."""
@@ -82,7 +84,7 @@ class ProfileManager:
     
     def load_profile(self) -> Optional[Dict[str, Any]]:
         """Load existing profile from file."""
-        if os.path.exists(self.profile_file):
+        if self.profile_file.exists():
             try:
                 with open(self.profile_file, 'r') as f:
                     return json.load(f)

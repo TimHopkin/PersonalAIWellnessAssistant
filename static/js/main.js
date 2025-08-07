@@ -215,6 +215,9 @@ window.WellnessApp = {
         if (generateForm) {
             generateForm.addEventListener('submit', this.handlePlanGeneration.bind(this));
         }
+        
+        // Initialize chat functionality
+        this.initChatFunctionality();
     },
     
     // Schedule specific functionality
@@ -371,6 +374,234 @@ window.WellnessApp = {
         const calendar = document.getElementById('calendar');
         if (calendar) {
             console.log('Initializing calendar view');
+        }
+    },
+    
+    // Chat functionality
+    initChatFunctionality: function() {
+        try {
+            this.currentChatSession = null;
+            
+            const chatForm = document.getElementById('chatForm');
+            const chatInput = document.getElementById('chatInput');
+            const chatMessages = document.getElementById('chatMessages');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            if (chatForm && chatInput && chatMessages && sendBtn) {
+                chatForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    
+                    try {
+                        const message = chatInput.value.trim();
+                        if (!message) return;
+                        
+                        // Add user message to chat
+                        this.addUserMessage(message);
+                        
+                        // Clear input and disable send button
+                        chatInput.value = '';
+                        sendBtn.disabled = true;
+                        sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                        
+                        // Send message to AI
+                        this.sendChatMessage(message);
+                    } catch (error) {
+                        console.error('Error handling chat form submit:', error);
+                        this.showToast('Error sending message. Please try again.', 'error');
+                    }
+                });
+                
+                console.log('Chat functionality initialized');
+            } else {
+                console.log('Chat elements not found on this page');
+            }
+        } catch (error) {
+            console.error('Error initializing chat functionality:', error);
+        }
+    },
+    
+    addUserMessage: function(message) {
+        try {
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return;
+            
+            const messageHtml = `
+                <div class="message user-message mb-3">
+                    <div class="d-flex justify-content-end">
+                        <div class="flex-grow-1" style="max-width: 70%;">
+                            <div class="bg-primary text-white p-3 rounded shadow-sm">
+                                <p class="mb-0">${this.escapeHtml(message)}</p>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0 ms-3">
+                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (error) {
+            console.error('Error adding user message:', error);
+        }
+    },
+    
+    addAIMessage: function(message, isTyping = false) {
+        try {
+            const chatMessages = document.getElementById('chatMessages');
+            if (!chatMessages) return null;
+            
+            const messageId = 'ai-msg-' + Date.now();
+            
+            const messageHtml = `
+                <div class="message ai-message mb-3" id="${messageId}">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="fas fa-robot text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                ${isTyping ? '<div class="typing-indicator"><span></span><span></span><span></span></div>' : `<p class="mb-0">${message}</p>`}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return messageId;
+        } catch (error) {
+            console.error('Error adding AI message:', error);
+            return null;
+        }
+    },
+    
+    sendChatMessage: function(message) {
+        const self = this;
+        
+        // Show typing indicator
+        const typingId = this.addAIMessage('', true);
+        
+        fetch('/api/chat-update-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: message,
+                session_id: this.currentChatSession
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove typing indicator
+            const typingElement = document.getElementById(typingId);
+            if (typingElement) {
+                typingElement.remove();
+            }
+            
+            if (data.success) {
+                // Update session ID
+                if (data.session_id) {
+                    self.currentChatSession = data.session_id;
+                }
+                
+                // Add AI response
+                self.addAIMessage(data.response);
+                
+                // If there are proposed changes, show them
+                if (data.proposed_changes && data.proposed_changes.length > 0) {
+                    self.showProposedChanges(data.proposed_changes);
+                }
+            } else {
+                self.addAIMessage('Sorry, I encountered an error: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            // Remove typing indicator
+            const typingElement = document.getElementById(typingId);
+            if (typingElement) {
+                typingElement.remove();
+            }
+            
+            self.addAIMessage('Sorry, I encountered an error processing your request. Please try again.');
+            console.error('Chat error:', error);
+        })
+        .finally(() => {
+            // Re-enable send button
+            const sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        });
+    },
+    
+    showProposedChanges: function(changes) {
+        try {
+            if (!changes || changes.length === 0) return;
+            
+            const changesList = changes.map(change => 
+                `<li class="mb-1"><i class="fas fa-arrow-right text-primary me-2"></i>${this.escapeHtml(change)}</li>`
+            ).join('');
+            
+            const proposedChangesHtml = `
+                <div class="message ai-message mb-3">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="fas fa-exclamation text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="bg-warning bg-opacity-10 border border-warning p-3 rounded shadow-sm">
+                                <h6 class="mb-2 text-warning"><i class="fas fa-check me-1"></i>Changes Applied</h6>
+                                <p class="mb-2 small">The following changes have been made to your wellness plan:</p>
+                                <ul class="mb-2 small">${changesList}</ul>
+                                <p class="mb-0 small text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Your plan has been automatically saved. Refresh the page to see the updated plan.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                chatMessages.insertAdjacentHTML('beforeend', proposedChangesHtml);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        } catch (error) {
+            console.error('Error showing proposed changes:', error);
+        }
+    },
+    
+    escapeHtml: function(text) {
+        try {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        } catch (error) {
+            console.error('Error escaping HTML:', error);
+            return String(text).replace(/[&<>"']/g, function(match) {
+                const escapeMap = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                };
+                return escapeMap[match];
+            });
         }
     }
 };
