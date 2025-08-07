@@ -76,9 +76,13 @@ wellness_plan.json
 progress_data.json
 scheduling_results.json
 
-# API credentials
+# API credentials and authentication tokens
 credentials.json
 token.json
+token.pickle
+data/credentials.json
+data/token.json
+data/token.pickle
 
 # Logs
 *.log
