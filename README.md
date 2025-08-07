@@ -1,14 +1,16 @@
-# Personal AI Wellness Assistant - MVP
+# Personal AI Wellness Assistant
 
-🌟 Your AI-powered companion for holistic wellness! This MVP combines personalized wellness planning with smart calendar scheduling and progress tracking.
+🌟 Your AI-powered companion for holistic wellness! This application combines personalized wellness planning with smart calendar scheduling, progress tracking, and **AI chat for plan modifications**.
 
 ## Features
 
 - **🎯 AI-Powered Wellness Plans**: Generate personalized workout, meditation, and nutrition plans using Grok AI
+- **💬 AI Chat Interface**: Modify your wellness plan through natural language conversations
 - **📅 Smart Scheduling**: Automatically schedule activities on Google Calendar based on your availability
 - **📊 Progress Tracking**: Track your daily progress with manual input and device integration stubs
 - **🔄 Adaptive Planning**: Plans automatically adapt based on your completion rates and feedback
 - **📈 Analytics**: Weekly reports and wellness trend analysis
+- **🖥️ Desktop & Web Interface**: Beautiful web interface accessible as desktop app or in browser
 
 ## Quick Start
 
@@ -41,39 +43,54 @@ pip install -r requirements.txt
 
 ### 3. Run the Application
 
+**Desktop App (Recommended):**
 ```bash
-python main.py
+python3 desktop_app.py
+```
+
+**Web Only:**
+```bash
+python3 app.py
 ```
 
 ## Usage Guide
 
 ### First Time Setup
-1. Run `python main.py`
-2. Choose "1. Setup/Update Profile" to create your profile
-3. Choose "2. Generate Wellness Plan" to create your first plan
-4. Choose "3. Schedule Activities" to add them to your calendar
+1. Run `python3 desktop_app.py`
+2. Navigate to the **Profile** page to create your profile
+3. Go to the **Wellness Plan** page to generate your first AI-powered plan
+4. Use the **Schedule** page to add activities to your Google Calendar
+5. **Try the AI Chat**: On the Wellness Plan page, click "Chat with AI" to modify your plan using natural language!
 
 ### Daily Use
-1. Choose "4. Track Progress" to log your daily activities
-2. Choose "5. View Reports" to see your progress and trends
-3. The system will suggest plan adaptations based on your progress
+1. Use the **Progress** page to log your daily activities
+2. Check the **Reports** page to see your progress and trends
+3. **Chat with AI** to adjust your plan: "Make tomorrow's workout easier" or "Add more meditation time"
+4. The system will suggest plan adaptations based on your progress
 
 ## File Structure
 
 ```
-├── main.py                 # Main application interface
+├── desktop_app.py          # Desktop application launcher
+├── app.py                  # Flask web application
 ├── profile_manager.py      # User profile management
-├── plan_generator.py       # AI wellness plan generation
+├── plan_generator.py       # AI wellness plan generation with chat updates
 ├── calendar_integration.py # Google Calendar integration
 ├── progress_tracker.py     # Progress tracking and device stubs
-├── requirements.txt        # Python dependencies
-├── .env.example           # Environment variables template
-└── README.md              # This file
+├── chat_manager.py         # AI chat session management
+├── data_utils.py          # Data storage utilities
+├── templates/             # HTML templates for web interface
+├── static/               # CSS, JavaScript, and images
+├── requirements.txt       # Python dependencies
+├── .env.example          # Environment variables template
+└── README.md             # This file
 
 # Generated files (created during use)
 ├── profile.json           # Your profile data
 ├── wellness_plan.json     # Current wellness plan
 ├── progress_data.json     # Progress tracking data
+├── chat_history.json      # AI chat conversation history
+├── backups/              # Plan version backups
 ├── scheduling_results.json # Calendar scheduling results
 ├── credentials.json       # Google OAuth credentials (you provide)
 └── token.pickle          # Google OAuth token (auto-generated)
