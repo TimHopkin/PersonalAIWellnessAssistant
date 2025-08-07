@@ -617,15 +617,5 @@ window.addEventListener('error', function(event) {
     WellnessApp.showToast('An unexpected error occurred. Please try again.', 'error');
 });
 
-// Service worker registration for offline capability (optional)
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/static/js/sw.js')
-            .then(function(registration) {
-                console.log('ServiceWorker registration successful');
-            })
-            .catch(function(err) {
-                console.log('ServiceWorker registration failed');
-            });
-    });
-}
+// Service worker disabled for this version
+// Can be added later for offline functionality

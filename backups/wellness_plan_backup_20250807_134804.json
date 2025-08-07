@@ -1,0 +1,207 @@
+{
+  "plan_name": "5-Day Wellness Plan (Fallback)",
+  "generated_at": "2025-08-07T09:50:15.297846",
+  "profile_snapshot": {
+    "created_at": "2025-08-07T09:50:15.297532",
+    "age": 30,
+    "weight": 75.0,
+    "height": 180.0,
+    "fitness_level": "intermediate",
+    "goals": "lose weight and build endurance",
+    "constraints": "prefer morning workouts, no gym",
+    "activity_preferences": {
+      "running": true,
+      "yoga": true,
+      "meditation": true,
+      "cycling": false,
+      "strength_training": false,
+      "stretching": true
+    },
+    "available_time_slots": "6-8 AM",
+    "updated_at": "2025-08-07T09:50:15.297565"
+  },
+  "plan_duration": 5,
+  "days": [
+    {
+      "day": 1,
+      "date_offset": 0,
+      "activities": [
+        {
+          "type": "walking",
+          "category": "cardio",
+          "duration_minutes": 16,
+          "intensity": "low",
+          "details": "30-minute walking session",
+          "equipment_needed": "none",
+          "best_time": "flexible"
+        },
+        {
+          "type": "breathing_exercise",
+          "category": "wellbeing",
+          "duration_minutes": 10,
+          "intensity": "low",
+          "details": "10-minute deep breathing exercise",
+          "equipment_needed": "none",
+          "best_time": "evening"
+        }
+      ],
+      "nutrition": {
+        "focus": "balanced nutrition",
+        "recommendations": [
+          "Eat plenty of vegetables",
+          "Stay hydrated",
+          "Include lean proteins"
+        ]
+      },
+      "notes": "Stay active"
+    },
+    {
+      "day": 2,
+      "date_offset": 1,
+      "activities": [
+        {
+          "type": "stretching",
+          "category": "flexibility",
+          "duration_minutes": 11,
+          "intensity": "low",
+          "details": "20-minute stretching session",
+          "equipment_needed": "none",
+          "best_time": "flexible"
+        },
+        {
+          "type": "breathing_exercise",
+          "category": "wellbeing",
+          "duration_minutes": 10,
+          "intensity": "low",
+          "details": "10-minute deep breathing exercise",
+          "equipment_needed": "none",
+          "best_time": "evening"
+        }
+      ],
+      "nutrition": {
+        "focus": "balanced nutrition",
+        "recommendations": [
+          "Eat plenty of vegetables",
+          "Stay hydrated",
+          "Include lean proteins"
+        ]
+      },
+      "notes": "Stay active"
+    },
+    {
+      "day": 3,
+      "date_offset": 2,
+      "activities": [
+        {
+          "type": "bodyweight_exercises",
+          "category": "strength",
+          "duration_minutes": 13,
+          "intensity": "low",
+          "details": "25-minute bodyweight exercises session",
+          "equipment_needed": "none",
+          "best_time": "flexible"
+        },
+        {
+          "type": "breathing_exercise",
+          "category": "wellbeing",
+          "duration_minutes": 10,
+          "intensity": "low",
+          "details": "10-minute deep breathing exercise",
+          "equipment_needed": "none",
+          "best_time": "evening"
+        }
+      ],
+      "nutrition": {
+        "focus": "balanced nutrition",
+        "recommendations": [
+          "Eat plenty of vegetables",
+          "Stay hydrated",
+          "Include lean proteins"
+        ]
+      },
+      "notes": "Stay active"
+    },
+    {
+      "day": 4,
+      "date_offset": 3,
+      "activities": [
+        {
+          "type": "yoga",
+          "category": "flexibility",
+          "duration_minutes": 11,
+          "intensity": "low",
+          "details": "20-minute yoga session",
+          "equipment_needed": "none",
+          "best_time": "flexible"
+        },
+        {
+          "type": "breathing_exercise",
+          "category": "wellbeing",
+          "duration_minutes": 10,
+          "intensity": "low",
+          "details": "10-minute deep breathing exercise",
+          "equipment_needed": "none",
+          "best_time": "evening"
+        }
+      ],
+      "nutrition": {
+        "focus": "balanced nutrition",
+        "recommendations": [
+          "Eat plenty of vegetables",
+          "Stay hydrated",
+          "Include lean proteins"
+        ]
+      },
+      "notes": "Stay active"
+    },
+    {
+      "day": 5,
+      "date_offset": 4,
+      "activities": [
+        {
+          "type": "breathing_exercise",
+          "category": "wellbeing",
+          "duration_minutes": 10,
+          "intensity": "low",
+          "details": "10-minute deep breathing exercise",
+          "equipment_needed": "none",
+          "best_time": "evening"
+        }
+      ],
+      "nutrition": {
+        "focus": "balanced nutrition",
+        "recommendations": [
+          "Eat plenty of vegetables",
+          "Stay hydrated",
+          "Include lean proteins"
+        ]
+      },
+      "notes": "Rest day"
+    }
+  ],
+  "weekly_goals": [
+    "Build healthy habits",
+    "Increase daily movement",
+    "Improve wellbeing"
+  ],
+  "tips": [
+    "Start slowly",
+    "Listen to your body",
+    "Be consistent"
+  ],
+  "adapted_at": "2025-08-07T09:50:15.299047",
+  "adaptation_reason": "Progress rate: 30.0%",
+  "last_modified": "2025-08-07T13:28:04.549800",
+  "modification_history": [
+    {
+      "timestamp": "2025-08-07T13:28:04.549808",
+      "request": "Make my workouts easier",
+      "changes": [
+        "Reduced walking duration to 16 minutes",
+        "Reduced stretching duration to 11 minutes",
+        "Reduced bodyweight_exercises duration to 13 minutes",
+        "Reduced yoga duration to 11 minutes"
+      ]
+    }
+  ]
+}
