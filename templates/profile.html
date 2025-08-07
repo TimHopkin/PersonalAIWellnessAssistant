@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-lg">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user me-2"></i>Your Wellness Profile
+                </h4>
+                <p class="text-white-50 mb-0 mt-1">Tell us about yourself to create a personalized wellness plan</p>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="POST" action="/profile" id="profileForm">
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Basic Information
+                            </h5>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="age" class="form-label">Age *</label>
+                            <input type="number" class="form-control" id="age" name="age" 
+                                   value="{{ profile.age if profile else '' }}" 
+                                   min="13" max="120" required>
+                            <div class="form-text">Years old</div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="weight" class="form-label">Weight *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="weight" name="weight" 
+                                       value="{{ profile.weight if profile else '' }}" 
+                                       min="30" max="300" step="0.1" required>
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="height" class="form-label">Height *</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="height" name="height" 
+                                       value="{{ profile.height if profile else '' }}" 
+                                       min="100" max="250" required>
+                                <span class="input-group-text">cm</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fitness Level -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-chart-line me-2"></i>Fitness Level
+                            </h5>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="form-check form-check-card">
+                                        <input class="form-check-input" type="radio" name="fitness_level" 
+                                               id="beginner" value="beginner"
+                                               {% if not profile or profile.fitness_level == 'beginner' %}checked{% endif %}>
+                                        <label class="form-check-label card-check-label" for="beginner">
+                                            <div class="text-center p-3">
+                                                <i class="fas fa-seedling fa-2x text-success mb-2"></i>
+                                                <h6 class="fw-bold">Beginner</h6>
+                                                <p class="text-muted small mb-0">Just starting out or returning after a break</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check form-check-card">
+                                        <input class="form-check-input" type="radio" name="fitness_level" 
+                                               id="intermediate" value="intermediate"
+                                               {% if profile and profile.fitness_level == 'intermediate' %}checked{% endif %}>
+                                        <label class="form-check-label card-check-label" for="intermediate">
+                                            <div class="text-center p-3">
+                                                <i class="fas fa-running fa-2x text-primary mb-2"></i>
+                                                <h6 class="fw-bold">Intermediate</h6>
+                                                <p class="text-muted small mb-0">Regular exercise routine, comfortable with variety</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check form-check-card">
+                                        <input class="form-check-input" type="radio" name="fitness_level" 
+                                               id="advanced" value="advanced"
+                                               {% if profile and profile.fitness_level == 'advanced' %}checked{% endif %}>
+                                        <label class="form-check-label card-check-label" for="advanced">
+                                            <div class="text-center p-3">
+                                                <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
+                                                <h6 class="fw-bold">Advanced</h6>
+                                                <p class="text-muted small mb-0">Experienced with challenging workouts</p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Goals and Preferences -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-bullseye me-2"></i>Goals & Preferences
+                            </h5>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label for="goals" class="form-label">What are your wellness goals? *</label>
+                            <textarea class="form-control" id="goals" name="goals" rows="3" 
+                                      placeholder="e.g., lose 10kg, run a 5K, reduce stress, improve energy levels..." 
+                                      required>{{ profile.goals if profile else '' }}</textarea>
+                            <div class="form-text">Be specific about what you want to achieve</div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label for="constraints" class="form-label">Any constraints or preferences?</label>
+                            <textarea class="form-control" id="constraints" name="constraints" rows="3" 
+                                      placeholder="e.g., no workouts before 7AM, vegetarian diet, knee injury, limited equipment...">{{ profile.constraints if profile else '' }}</textarea>
+                            <div class="form-text">Help us customize your plan to fit your lifestyle</div>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="available_time_slots" class="form-label">When do you prefer to be active?</label>
+                            <input type="text" class="form-control" id="available_time_slots" name="available_time_slots" 
+                                   value="{{ profile.available_time_slots if profile else '' }}"
+                                   placeholder="e.g., 6-8 AM, 6-8 PM, lunch breaks, weekends">
+                            <div class="form-text">This helps us schedule activities at the best times for you</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Activity Preferences -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-heart me-2"></i>Activity Preferences
+                            </h5>
+                            <p class="text-muted">Select activities you enjoy or would like to try:</p>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="row g-3">
+                                {% set activities = [
+                                    ('running', 'Running', 'fas fa-running', 'text-danger'),
+                                    ('cycling', 'Cycling', 'fas fa-bicycle', 'text-info'),
+                                    ('yoga', 'Yoga', 'fas fa-leaf', 'text-success'),
+                                    ('stretching', 'Stretching', 'fas fa-expand-arrows-alt', 'text-warning'),
+                                    ('meditation', 'Meditation', 'fas fa-om', 'text-purple'),
+                                    ('strength_training', 'Strength Training', 'fas fa-dumbbell', 'text-dark')
+                                ] %}
+                                
+                                {% for activity_key, activity_name, icon, color in activities %}
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="form-check activity-check">
+                                        <input class="form-check-input" type="checkbox" name="activities" 
+                                               id="{{ activity_key }}" value="{{ activity_key }}"
+                                               {% if profile and profile.activity_preferences and profile.activity_preferences[activity_key] %}checked{% endif %}>
+                                        <label class="form-check-label activity-label" for="{{ activity_key }}">
+                                            <div class="d-flex align-items-center p-3">
+                                                <i class="{{ icon }} fa-2x {{ color }} me-3"></i>
+                                                <div>
+                                                    <h6 class="mb-0">{{ activity_name }}</h6>
+                                                    <small class="text-muted">
+                                                        {% if activity_key == 'running' %}Great for cardio and endurance
+                                                        {% elif activity_key == 'cycling' %}Low impact, full body workout
+                                                        {% elif activity_key == 'yoga' %}Flexibility and mindfulness
+                                                        {% elif activity_key == 'stretching' %}Improve flexibility and recovery
+                                                        {% elif activity_key == 'meditation' %}Mental wellness and stress relief
+                                                        {% elif activity_key == 'strength_training' %}Build muscle and strength
+                                                        {% endif %}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- BMI Calculator -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <h6 class="card-title">
+                                        <i class="fas fa-calculator me-2"></i>BMI Calculator
+                                    </h6>
+                                    <div id="bmiResult" class="d-none">
+                                        <p class="mb-2">Your BMI: <span id="bmiValue" class="fw-bold"></span></p>
+                                        <p class="mb-0 text-muted" id="bmiCategory"></p>
+                                    </div>
+                                    <small class="text-muted">Fill in height and weight to see your BMI</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                                    <i class="fas fa-undo me-1"></i>Reset Form
+                                </button>
+                                <div>
+                                    <button type="submit" class="btn btn-primary btn-lg px-4">
+                                        <i class="fas fa-save me-2"></i>Save Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Existing Profile Summary -->
+        {% if profile %}
+        <div class="card mt-4">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Current Profile Summary
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Age:</strong> {{ profile.age }} years</p>
+                        <p><strong>Weight:</strong> {{ profile.weight }} kg</p>
+                        <p><strong>Height:</strong> {{ profile.height }} cm</p>
+                        <p><strong>Fitness Level:</strong> {{ profile.fitness_level.title() }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Goals:</strong> {{ profile.goals }}</p>
+                        {% if profile.constraints %}
+                        <p><strong>Constraints:</strong> {{ profile.constraints }}</p>
+                        {% endif %}
+                        {% if profile.available_time_slots %}
+                        <p><strong>Available Times:</strong> {{ profile.available_time_slots }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if profile.activity_preferences %}
+                <h6 class="mt-3 mb-2">Preferred Activities:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for activity, likes in profile.activity_preferences.items() %}
+                        {% if likes %}
+                        <span class="badge bg-primary">{{ activity.replace('_', ' ').title() }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        Profile created: {{ profile.created_at[:10] if profile.created_at else 'Unknown' }}
+                        {% if profile.updated_at and profile.updated_at != profile.created_at %}
+                        | Last updated: {{ profile.updated_at[:10] }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+.form-check-card .form-check-input {
+    display: none;
+}
+
+.card-check-label {
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+    display: block;
+    background: white;
+}
+
+.card-check-label:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow);
+}
+
+.form-check-input:checked + .card-check-label {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.05));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.activity-check {
+    margin-bottom: 0;
+}
+
+.activity-label {
+    cursor: pointer;
+    border: 2px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+    display: block;
+    background: white;
+}
+
+.activity-label:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--card-shadow);
+}
+
+.activity-check .form-check-input:checked + .activity-label {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.05));
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+}
+
+.text-purple {
+    color: #8b5cf6 !important;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function calculateBMI() {
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+    
+    if (weight && height) {
+        const heightInMeters = height / 100;
+        const bmi = weight / (heightInMeters * heightInMeters);
+        
+        document.getElementById('bmiValue').textContent = bmi.toFixed(1);
+        
+        let category = '';
+        let className = '';
+        
+        if (bmi < 18.5) {
+            category = 'Underweight';
+            className = 'text-info';
+        } else if (bmi < 25) {
+            category = 'Normal weight';
+            className = 'text-success';
+        } else if (bmi < 30) {
+            category = 'Overweight';
+            className = 'text-warning';
+        } else {
+            category = 'Obese';
+            className = 'text-danger';
+        }
+        
+        const categoryElement = document.getElementById('bmiCategory');
+        categoryElement.textContent = category;
+        categoryElement.className = `mb-0 ${className} fw-bold`;
+        
+        document.getElementById('bmiResult').classList.remove('d-none');
+    } else {
+        document.getElementById('bmiResult').classList.add('d-none');
+    }
+}
+
+function resetForm() {
+    if (confirm('Are you sure you want to reset the form? All unsaved changes will be lost.')) {
+        document.getElementById('profileForm').reset();
+        document.getElementById('bmiResult').classList.add('d-none');
+    }
+}
+
+// Add event listeners for BMI calculation
+document.getElementById('weight').addEventListener('input', calculateBMI);
+document.getElementById('height').addEventListener('input', calculateBMI);
+
+// Calculate BMI on page load if values exist
+document.addEventListener('DOMContentLoaded', function() {
+    calculateBMI();
+});
+
+// Form validation
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    const age = document.getElementById('age').value;
+    const weight = document.getElementById('weight').value;
+    const height = document.getElementById('height').value;
+    const goals = document.getElementById('goals').value;
+    
+    if (!age || !weight || !height || !goals) {
+        e.preventDefault();
+        alert('Please fill in all required fields (marked with *)');
+        return false;
+    }
+    
+    if (age < 13 || age > 120) {
+        e.preventDefault();
+        alert('Please enter a valid age between 13 and 120');
+        return false;
+    }
+    
+    if (weight < 30 || weight > 300) {
+        e.preventDefault();
+        alert('Please enter a valid weight between 30 and 300 kg');
+        return false;
+    }
+    
+    if (height < 100 || height > 250) {
+        e.preventDefault();
+        alert('Please enter a valid height between 100 and 250 cm');
+        return false;
+    }
+});
+</script>
+{% endblock %}

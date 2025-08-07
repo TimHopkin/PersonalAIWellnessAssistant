@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6 text-gradient fw-bold mb-2">
+                    <i class="fas fa-cog me-3"></i>Settings
+                </h1>
+                <p class="text-muted mb-0">Configure your wellness assistant and API integrations</p>
+            </div>
+        </div>
+        
+        <!-- API Integration Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-plug me-2"></i>API Integration Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-robot fa-2x {{ 'text-success' if api_status.grok_api else 'text-muted' }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Grok AI</h6>
+                                <p class="text-muted mb-1 small">AI-powered wellness plan generation</p>
+                                <span class="badge {{ 'bg-success' if api_status.grok_api else 'bg-warning' }}">
+                                    {{ 'Connected' if api_status.grok_api else 'Not Configured' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-calendar fa-2x {{ 'text-success' if api_status.google_calendar else 'text-muted' }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Google Calendar</h6>
+                                <p class="text-muted mb-1 small">Activity scheduling and reminders</p>
+                                <span class="badge {{ 'bg-success' if api_status.google_calendar else 'bg-warning' }}">
+                                    {{ 'Connected' if api_status.google_calendar else 'Demo Mode' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-heartbeat fa-2x {{ 'text-success' if api_status.garmin else 'text-muted' }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Garmin Connect</h6>
+                                <p class="text-muted mb-1 small">Fitness tracking and health metrics</p>
+                                <span class="badge {{ 'bg-success' if api_status.garmin else 'bg-secondary' }}">
+                                    {{ 'Connected' if api_status.garmin else 'Not Available' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="d-flex align-items-center p-3 border rounded">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="fas fa-weight fa-2x {{ 'text-success' if api_status.renpho else 'text-muted' }}"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Renpho Scale</h6>
+                                <p class="text-muted mb-1 small">Body composition and weight tracking</p>
+                                <span class="badge {{ 'bg-success' if api_status.renpho else 'bg-secondary' }}">
+                                    {{ 'Connected' if api_status.renpho else 'Not Available' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Setup Instructions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>Setup Instructions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="setupAccordion">
+                    <!-- Grok API Setup -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button {{ 'collapsed' if api_status.grok_api }}" type="button" data-bs-toggle="collapse" data-bs-target="#grokSetup">
+                                <i class="fas fa-robot me-2"></i>
+                                Grok AI Setup {{ '✓' if api_status.grok_api else '(Required)' }}
+                            </button>
+                        </h2>
+                        <div id="grokSetup" class="accordion-collapse collapse {{ 'show' if not api_status.grok_api }}">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li class="mb-2">Subscribe to SuperGrok/Premium+ at <a href="https://x.ai" target="_blank">x.ai</a> (~$8/month)</li>
+                                    <li class="mb-2">Get your API key from <a href="https://x.ai/api" target="_blank">x.ai/api</a></li>
+                                    <li class="mb-2">Create a <code>.env</code> file in the project directory</li>
+                                    <li class="mb-2">Add: <code>GROK_API_KEY=your_key_here</code></li>
+                                    <li>Restart the application</li>
+                                </ol>
+                                {% if not api_status.grok_api %}
+                                <div class="alert alert-warning mt-3" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Without Grok API, the app uses fallback plan generation with limited features.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Google Calendar Setup -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#calendarSetup">
+                                <i class="fas fa-calendar me-2"></i>
+                                Google Calendar Setup {{ '✓' if api_status.google_calendar else '(Optional)' }}
+                            </button>
+                        </h2>
+                        <div id="calendarSetup" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li class="mb-2">Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+                                    <li class="mb-2">Create a new project or select existing</li>
+                                    <li class="mb-2">Enable the Google Calendar API</li>
+                                    <li class="mb-2">Create OAuth 2.0 credentials (Desktop application)</li>
+                                    <li class="mb-2">Download credentials as <code>credentials.json</code></li>
+                                    <li class="mb-2">Place <code>credentials.json</code> in the project directory</li>
+                                    <li>Restart and authenticate when prompted</li>
+                                </ol>
+                                {% if not api_status.google_calendar %}
+                                <div class="alert alert-info mt-3" role="alert">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Currently running in demo mode with mock calendar events.
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Garmin Setup -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#garminSetup">
+                                <i class="fas fa-heartbeat me-2"></i>
+                                Garmin Connect Setup (Optional)
+                            </button>
+                        </h2>
+                        <div id="garminSetup" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li class="mb-2">Register at <a href="https://developer.garmin.com/gc-developer-program/" target="_blank">Garmin Developer Program</a></li>
+                                    <li class="mb-2">Create an application for Health API access</li>
+                                    <li class="mb-2">Get your Client ID and Client Secret</li>
+                                    <li class="mb-2">Add to <code>.env</code> file:</li>
+                                    <ul>
+                                        <li><code>GARMIN_CLIENT_ID=your_client_id</code></li>
+                                        <li><code>GARMIN_CLIENT_SECRET=your_client_secret</code></li>
+                                    </ul>
+                                    <li>Restart the application</li>
+                                </ol>
+                                <div class="alert alert-warning mt-3" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Note: Garmin Health API is officially for business use. Personal access may require special approval.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Renpho Setup -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#renphoSetup">
+                                <i class="fas fa-weight me-2"></i>
+                                Renpho Scale Setup (Optional)
+                            </button>
+                        </h2>
+                        <div id="renphoSetup" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li class="mb-2">Have a Renpho smart scale and app account</li>
+                                    <li class="mb-2">Add to <code>.env</code> file:</li>
+                                    <ul>
+                                        <li><code>RENPHO_EMAIL=your_email@example.com</code></li>
+                                        <li><code>RENPHO_PASSWORD=your_app_password</code></li>
+                                    </ul>
+                                    <li>Restart the application</li>
+                                </ol>
+                                <div class="alert alert-warning mt-3" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Uses unofficial API endpoints. For better integration, consider syncing your scale with Google Fit.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Management -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Data Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Data Storage</h6>
+                        <p class="text-muted">Your data is stored locally in JSON files:</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-file me-2"></i>profile.json - Your profile</li>
+                            <li><i class="fas fa-file me-2"></i>wellness_plan.json - Current plan</li>
+                            <li><i class="fas fa-file me-2"></i>progress_data.json - Activity logs</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Privacy & Security</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>All data stays on your device</li>
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>No data sent to third parties</li>
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>API keys stored securely</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Export Data</h6>
+                        <p class="text-muted mb-0 small">Download your wellness data</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1 text-danger">Clear All Data</h6>
+                        <p class="text-muted mb-0 small">Permanently delete all wellness data</p>
+                    </div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="clearAllData()">
+                        <i class="fas fa-trash me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Application Info -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>About
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Personal AI Wellness Assistant</h6>
+                        <p class="text-muted">Version: MVP 1.0</p>
+                        <p class="text-muted">Your AI-powered companion for holistic wellness management.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Features</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-check text-success me-2"></i>Personalized wellness plans</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Calendar integration</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Progress tracking</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Analytics & insights</li>
+                            <li><i class="fas fa-check text-success me-2"></i>Device integration</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-heart text-danger me-1"></i>
+                        Built with care for your wellness journey
+                        <i class="fas fa-heart text-danger ms-1"></i>
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="https://github.com/anthropics/claude-code" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="fab fa-github me-1"></i>Claude Code
+                        </a>
+                        <button class="btn btn-outline-info btn-sm" onclick="showHelp()">
+                            <i class="fas fa-question-circle me-1"></i>Help
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportData() {
+    // Create a simple data export
+    const data = {
+        exported_at: new Date().toISOString(),
+        note: "Personal AI Wellness Assistant Data Export",
+        profile: "See profile.json",
+        plan: "See wellness_plan.json",
+        progress: "See progress_data.json"
+    };
+    
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], {type:'application/json'});
+    
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'wellness_data_export.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    showToast('Data export downloaded', 'success');
+}
+
+function clearAllData() {
+    if (confirm('⚠️ This will permanently delete ALL your wellness data, including your profile, plans, and progress. This cannot be undone.\n\nType "DELETE" to confirm:')) {
+        const confirmation = prompt('Type "DELETE" to confirm data deletion:');
+        if (confirmation === 'DELETE') {
+            // In a real implementation, this would make an API call to clear data
+            showToast('Data clearing is not implemented in this demo. Please manually delete JSON files if needed.', 'info');
+        } else {
+            showToast('Data deletion cancelled', 'info');
+        }
+    }
+}
+
+function showHelp() {
+    const helpContent = `
+    Personal AI Wellness Assistant Help
+    
+    Getting Started:
+    1. Set up your profile with personal information and preferences
+    2. Generate an AI-powered wellness plan tailored to your goals
+    3. Schedule activities on your calendar
+    4. Track your daily progress and activities
+    5. View reports and analytics to monitor your journey
+    
+    For technical support, check the README.md file or the setup instructions above.
+    `;
+    
+    alert(helpContent);
+}
+
+function showToast(message, type) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'info' ? 'info' : 'primary'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

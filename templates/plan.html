@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Wellness Plan - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6 text-gradient fw-bold mb-2">
+                    <i class="fas fa-bullseye me-3"></i>Your Wellness Plan
+                </h1>
+                <p class="text-muted mb-0">AI-powered personalized wellness plan tailored to your goals</p>
+            </div>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#generatePlanModal">
+                    <i class="fas fa-magic me-2"></i>Generate New Plan
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    {% if not profile %}
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                    <h5 class="alert-heading mb-1">Profile Required</h5>
+                    <p class="mb-2">Please create your profile first to generate a personalized wellness plan.</p>
+                    <a href="/profile" class="btn btn-warning btn-sm">
+                        <i class="fas fa-user-plus me-1"></i>Create Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif not plan %}
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-magic fa-4x text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">No Wellness Plan Yet</h3>
+            <p class="text-muted mb-4">Generate your first AI-powered wellness plan to get started on your journey!</p>
+            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#generatePlanModal">
+                <i class="fas fa-sparkles me-2"></i>Generate My Plan
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <!-- Plan Overview -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>{{ plan.plan_name }}
+                    </h5>
+                    <div>
+                        <span class="badge bg-primary">{{ plan.plan_duration }} days</span>
+                        <span class="badge bg-success ms-1">{{ plan.days|length }} activities planned</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p class="mb-2"><strong>Generated:</strong> {{ plan.generated_at[:10] if plan.generated_at else 'Unknown' }}</p>
+                        {% if plan.profile_snapshot %}
+                        <p class="mb-2"><strong>Fitness Level:</strong> {{ plan.profile_snapshot.fitness_level.title() }}</p>
+                        <p class="mb-2"><strong>Goals:</strong> {{ plan.profile_snapshot.goals }}</p>
+                        {% endif %}
+                        
+                        {% if plan.weekly_goals %}
+                        <div class="mt-3">
+                            <h6 class="fw-bold">Weekly Goals:</h6>
+                            <ul class="list-unstyled">
+                                {% for goal in plan.weekly_goals %}
+                                <li class="mb-1"><i class="fas fa-target text-primary me-2"></i>{{ goal }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if plan.tips %}
+                        <h6 class="fw-bold">Tips for Success:</h6>
+                        <ul class="list-unstyled">
+                            {% for tip in plan.tips %}
+                            <li class="mb-1"><i class="fas fa-lightbulb text-warning me-2"></i>{{ tip }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Plan -->
+    <div class="col-12">
+        <div class="row">
+            {% for day in plan.days %}
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #{{ '%06x'|format((loop.index * 1234567) % 16777216) }}, #{{ '%06x'|format((loop.index * 2345678) % 16777216) }});">
+                        <h6 class="mb-0">
+                            <i class="fas fa-calendar-day me-2"></i>Day {{ day.day }}
+                            {% if day.get('date_offset') == 0 %}
+                            <span class="badge bg-light text-dark ms-2">Today</span>
+                            {% elif day.get('date_offset') == 1 %}
+                            <span class="badge bg-light text-dark ms-2">Tomorrow</span>
+                            {% endif %}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Activities -->
+                        {% if day.activities %}
+                        <div class="mb-3">
+                            <h6 class="fw-bold mb-2">Activities</h6>
+                            {% for activity in day.activities %}
+                            <div class="activity-card mb-2">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-{{ 'running' if activity.type == 'running' else 'dumbbell' if 'strength' in activity.type else 'leaf' if activity.type == 'yoga' else 'heart' if 'meditation' in activity.type else 'walking' }} text-white fa-sm"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <h6 class="mb-0 fw-bold">{{ activity.type.replace('_', ' ').title() }}</h6>
+                                            <span class="badge badge-intensity-{{ activity.intensity }}">{{ activity.intensity }}</span>
+                                        </div>
+                                        <p class="text-muted mb-1 small">{{ activity.details }}</p>
+                                        <div class="d-flex align-items-center text-sm text-muted">
+                                            <i class="fas fa-clock me-1"></i>{{ activity.duration_minutes }} min
+                                            {% if activity.equipment_needed and activity.equipment_needed != 'none' %}
+                                            <span class="ms-3">
+                                                <i class="fas fa-tools me-1"></i>{{ activity.equipment_needed }}
+                                            </span>
+                                            {% endif %}
+                                            {% if activity.best_time %}
+                                            <span class="ms-3">
+                                                <i class="fas fa-sun me-1"></i>{{ activity.best_time }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Nutrition -->
+                        {% if day.nutrition %}
+                        <div class="mb-3">
+                            <h6 class="fw-bold mb-2">
+                                <i class="fas fa-apple-alt text-success me-1"></i>Nutrition Focus
+                            </h6>
+                            <p class="mb-2"><strong>{{ day.nutrition.focus.title() }}</strong></p>
+                            {% if day.nutrition.recommendations %}
+                            <ul class="list-unstyled">
+                                {% for rec in day.nutrition.recommendations %}
+                                <li class="mb-1"><i class="fas fa-check text-success me-2"></i>{{ rec }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Notes -->
+                        {% if day.notes %}
+                        <div class="alert alert-info py-2 px-3" role="alert">
+                            <i class="fas fa-sticky-note me-1"></i>
+                            <strong>Note:</strong> {{ day.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Total time: {{ day.activities|sum(attribute='duration_minutes') if day.activities else 0 }} min
+                            </small>
+                            <div>
+                                <button class="btn btn-outline-primary btn-sm" onclick="scheduleDay({{ day.day }})">
+                                    <i class="fas fa-calendar-plus me-1"></i>Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Generate Plan Modal -->
+<div class="modal fade" id="generatePlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-magic me-2"></i>Generate Wellness Plan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="generatePlanForm">
+                <div class="modal-body">
+                    {% if not profile %}
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Please create your profile first before generating a plan.
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <label for="planDays" class="form-label">Plan Duration</label>
+                        <select class="form-select" id="planDays" name="days">
+                            <option value="3">3 days - Quick start</option>
+                            <option value="7" selected>7 days - Full week</option>
+                            <option value="14">14 days - Extended plan</option>
+                        </select>
+                        <div class="form-text">Choose how many days you want in your wellness plan</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Your Current Profile:</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Fitness Level:</strong> {{ profile.fitness_level.title() if profile else 'Not set' }}</li>
+                            <li><strong>Goals:</strong> {{ profile.goals if profile else 'Not set' }}</li>
+                            <li><strong>Preferences:</strong> 
+                                {% if profile and profile.activity_preferences %}
+                                    {% for activity, likes in profile.activity_preferences.items() %}
+                                        {% if likes %}{{ activity.replace('_', ' ').title() }}{% if not loop.last %}, {% endif %}{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    Not set
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    {% if plan %}
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Generating a new plan will replace your current plan. Make sure you've completed or saved any important progress!
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {% if profile %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sparkles me-2"></i>Generate Plan
+                    </button>
+                    {% else %}
+                    <a href="/profile" class="btn btn-warning">
+                        <i class="fas fa-user-plus me-2"></i>Create Profile First
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('generatePlanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+    submitBtn.disabled = true;
+    
+    const formData = new FormData(this);
+    
+    fetch('/generate-plan', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide modal
+            bootstrap.Modal.getInstance(document.getElementById('generatePlanModal')).hide();
+            
+            // Show success message and reload
+            showToast('Wellness plan generated successfully!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast('Error generating plan: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error generating plan: ' + error.message, 'error');
+    })
+    .finally(() => {
+        // Reset button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+function scheduleDay(dayNumber) {
+    showToast(`Scheduling Day ${dayNumber} activities...`, 'info');
+    
+    // Redirect to schedule page with day parameter
+    window.location.href = `/schedule?day=${dayNumber}`;
+}
+
+function showToast(message, type) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : type === 'info' ? 'info' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

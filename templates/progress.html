@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}Progress Tracking - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6 text-gradient fw-bold mb-2">
+                    <i class="fas fa-chart-bar me-3"></i>Progress Tracking
+                </h1>
+                <p class="text-muted mb-0">Track your daily activities and monitor your wellness journey</p>
+            </div>
+            <div>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#logActivityModal">
+                    <i class="fas fa-plus me-2"></i>Log Activity
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Weekly Progress Summary -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-week me-2"></i>Weekly Summary
+                    <span class="text-muted">({{ weekly_stats.period if weekly_stats else 'No data' }})</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if weekly_stats and weekly_stats.stats %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-primary mb-1">{{ "%.1f"|format(weekly_stats.stats.activity_completion_rate * 100) }}%</h3>
+                            <p class="text-muted mb-0">Completion Rate</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-success mb-1">{{ weekly_stats.stats.total_duration_completed_minutes or 0 }}</h3>
+                            <p class="text-muted mb-0">Minutes Active</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-info mb-1">{{ "%.1f"|format(weekly_stats.stats.average_energy_level or 0) }}</h3>
+                            <p class="text-muted mb-0">Avg Energy</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h3 class="text-warning mb-1">{{ "%.1f"|format(weekly_stats.stats.average_mood_score or 0) }}</h3>
+                            <p class="text-muted mb-0">Avg Mood</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Progress Data Yet</h5>
+                    <p class="text-muted mb-0">Start tracking activities to see your progress summary.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Today's Activities -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Today's Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if plan and plan.days %}
+                    {% set today_activities = plan.days[0].activities if plan.days else [] %}
+                    {% if today_activities %}
+                        {% for activity in today_activities %}
+                        <div class="activity-card mb-3" data-activity-id="{{ loop.index }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-{{ 'running' if activity.type == 'running' else 'dumbbell' if 'strength' in activity.type else 'leaf' if activity.type == 'yoga' else 'heart' if 'meditation' in activity.type else 'walking' }} me-2 text-primary"></i>
+                                        <h6 class="mb-0 fw-bold">{{ activity.type.replace('_', ' ').title() }}</h6>
+                                        <span class="badge badge-intensity-{{ activity.intensity }} ms-2">{{ activity.intensity }}</span>
+                                    </div>
+                                    <p class="text-muted mb-2">{{ activity.details or 'No details' }}</p>
+                                    <div class="d-flex align-items-center text-sm">
+                                        <i class="fas fa-clock me-1"></i>{{ activity.duration_minutes }} min
+                                        {% if activity.equipment_needed and activity.equipment_needed != 'none' %}
+                                        <span class="ms-3"><i class="fas fa-tools me-1"></i>{{ activity.equipment_needed }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-outline-success btn-sm me-1" onclick="markActivityComplete('{{ loop.index }}')">
+                                        <i class="fas fa-check"></i> Complete
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="markActivitySkipped('{{ loop.index }}')">
+                                        <i class="fas fa-times"></i> Skip
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No activities planned for today</h5>
+                            <a href="/plan" class="btn btn-primary">Generate Plan</a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No wellness plan found</h5>
+                        <p class="text-muted">Create a wellness plan to start tracking activities.</p>
+                        <a href="/plan" class="btn btn-primary">Create Plan</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress Chart -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Recent Activity
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if progress_data and progress_data.daily_logs %}
+                    {% set recent_days = progress_data.daily_logs.keys() | list | sort(reverse=True) %}
+                    {% if recent_days %}
+                        {% for date_str in recent_days[:7] %}
+                            {% set day_log = progress_data.daily_logs[date_str] %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small">{{ date_str }}</span>
+                                <div>
+                                    <span class="badge bg-success me-1">{{ day_log.completed_activities|length }}</span>
+                                    {% if day_log.skipped_activities %}
+                                    <span class="badge bg-warning">{{ day_log.skipped_activities|length }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">No recent activity</p>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">Track activities to see progress</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-star me-2"></i>Quick Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if progress_data and progress_data.daily_logs %}
+                    {% set total_days = progress_data.daily_logs.keys() | list | length %}
+                    {% set active_days = 0 %}
+                    {% for date_str, day_log in progress_data.daily_logs.items() %}
+                        {% if day_log.completed_activities %}
+                            {% set active_days = active_days + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="text-primary mb-0">{{ active_days }}</h4>
+                            <small class="text-muted">Active Days</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success mb-0">{{ total_days }}</h4>
+                            <small class="text-muted">Total Days</small>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center">
+                        <p class="text-muted mb-0">No statistics yet</p>
+                        <small class="text-muted">Start tracking to see your stats</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Logging Modal -->
+<div class="modal fade" id="logActivityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-check me-2"></i>Log Activity
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="activityLogForm">
+                    <div class="mb-3">
+                        <label for="activityStatus" class="form-label">Status</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" value="completed" id="statusCompleted" checked>
+                            <label class="form-check-label" for="statusCompleted">
+                                <i class="fas fa-check-circle text-success me-1"></i>Completed
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" value="skipped" id="statusSkipped">
+                            <label class="form-check-label" for="statusSkipped">
+                                <i class="fas fa-times-circle text-warning me-1"></i>Skipped
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" value="partial" id="statusPartial">
+                            <label class="form-check-label" for="statusPartial">
+                                <i class="fas fa-clock text-info me-1"></i>Partially Completed
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="partialDurationDiv" style="display: none;">
+                        <label for="partialDuration" class="form-label">Minutes Completed</label>
+                        <input type="number" class="form-control" id="partialDuration" min="1" max="120">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="activityNotes" class="form-label">Notes (optional)</label>
+                        <textarea class="form-control" id="activityNotes" rows="3" placeholder="How did you feel? Any observations?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="energyLevel" class="form-label">Energy Level</label>
+                        <input type="range" class="form-range" id="energyLevel" min="1" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Low (1)</small>
+                            <span id="energyValue" class="fw-bold">5</span>
+                            <small class="text-muted">High (10)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="moodScore" class="form-label">Mood Score</label>
+                        <input type="range" class="form-range" id="moodScore" min="1" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Poor (1)</small>
+                            <span id="moodValue" class="fw-bold">5</span>
+                            <small class="text-muted">Excellent (10)</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveActivityLog()">
+                    <i class="fas fa-save me-1"></i>Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentActivityData = {};
+
+function markActivityComplete(activityId) {
+    currentActivityData = { activity_id: activityId, status: 'completed' };
+    document.getElementById('statusCompleted').checked = true;
+    new bootstrap.Modal(document.getElementById('logActivityModal')).show();
+}
+
+function markActivitySkipped(activityId) {
+    currentActivityData = { activity_id: activityId, status: 'skipped' };
+    document.getElementById('statusSkipped').checked = true;
+    new bootstrap.Modal(document.getElementById('logActivityModal')).show();
+}
+
+function saveActivityLog() {
+    const form = document.getElementById('activityLogForm');
+    const formData = new FormData(form);
+    
+    const activityData = {
+        ...currentActivityData,
+        status: formData.get('status'),
+        notes: document.getElementById('activityNotes').value,
+        energy_level: document.getElementById('energyLevel').value,
+        mood_score: document.getElementById('moodScore').value,
+        partial_duration: formData.get('status') === 'partial' ? 
+            parseInt(document.getElementById('partialDuration').value || 0) : null
+    };
+    
+    fetch('/track-activity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(activityData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('logActivityModal')).hide();
+            showToast('Activity logged successfully!', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast('Error logging activity: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error logging activity: ' + error.message, 'error');
+    });
+}
+
+// Show/hide partial duration input
+document.querySelectorAll('input[name="status"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const partialDiv = document.getElementById('partialDurationDiv');
+        if (this.value === 'partial') {
+            partialDiv.style.display = 'block';
+        } else {
+            partialDiv.style.display = 'none';
+        }
+    });
+});
+
+// Update range slider values
+document.getElementById('energyLevel').addEventListener('input', function() {
+    document.getElementById('energyValue').textContent = this.value;
+});
+
+document.getElementById('moodScore').addEventListener('input', function() {
+    document.getElementById('moodValue').textContent = this.value;
+});
+
+function showToast(message, type) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

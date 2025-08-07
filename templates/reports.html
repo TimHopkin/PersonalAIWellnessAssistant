@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6 text-gradient fw-bold mb-2">
+                    <i class="fas fa-chart-line me-3"></i>Reports & Analytics
+                </h1>
+                <p class="text-muted mb-0">Insights into your wellness journey and progress trends</p>
+            </div>
+            <div>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-calendar me-1"></i>Time Period
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" data-period="7">Last 7 days</a></li>
+                        <li><a class="dropdown-item" href="#" data-period="30">Last 30 days</a></li>
+                        <li><a class="dropdown-item" href="#" data-period="90">Last 3 months</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if weekly_stats and weekly_stats.stats %}
+    <!-- Summary Cards -->
+    <div class="col-12 mb-4">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-primary">{{ "%.1f"|format(weekly_stats.stats.activity_completion_rate * 100) }}%</div>
+                    <div class="stat-label">Completion Rate</div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-primary" style="width: {{ weekly_stats.stats.activity_completion_rate * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-success">{{ weekly_stats.stats.total_duration_completed_minutes or 0 }}</div>
+                    <div class="stat-label">Minutes Active</div>
+                    <div class="mt-2 text-muted small">
+                        {{ "%.1f"|format((weekly_stats.stats.total_duration_completed_minutes or 0) / 60) }} hours total
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="wellness-score {{ 'score-excellent' if weekly_stats.stats.average_energy_level >= 8 else 'score-good' if weekly_stats.stats.average_energy_level >= 6 else 'score-fair' if weekly_stats.stats.average_energy_level >= 4 else 'score-poor' }}">
+                        {{ "%.1f"|format(weekly_stats.stats.average_energy_level or 0) }}
+                    </div>
+                    <div class="stat-label mt-2">Average Energy</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="wellness-score {{ 'score-excellent' if weekly_stats.stats.average_mood_score >= 8 else 'score-good' if weekly_stats.stats.average_mood_score >= 6 else 'score-fair' if weekly_stats.stats.average_mood_score >= 4 else 'score-poor' }}">
+                        {{ "%.1f"|format(weekly_stats.stats.average_mood_score or 0) }}
+                    </div>
+                    <div class="stat-label mt-2">Average Mood</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="col-lg-8 mb-4">
+        <!-- Progress Trend Chart -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Activity Completion Trend
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="completionTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wellness Scores Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-heart me-2"></i>Wellness Scores Over Time
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="wellnessChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar Stats -->
+    <div class="col-lg-4">
+        <!-- Activity Breakdown -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-pie-chart me-2"></i>Activity Breakdown
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if chart_data and chart_data.activity_distribution %}
+                    {% for activity_type, count in chart_data.activity_distribution.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold">{{ activity_type.replace('_', ' ').title() }}</span>
+                        <span class="badge bg-primary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-pie fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No activity data yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Performance Insights -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Insights
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if weekly_stats and weekly_stats.stats %}
+                    {% set completion_rate = weekly_stats.stats.activity_completion_rate %}
+                    {% set avg_energy = weekly_stats.stats.average_energy_level %}
+                    {% set active_days = weekly_stats.stats.active_days %}
+                    
+                    <div class="mb-3">
+                        <h6 class="text-success">✓ Strengths</h6>
+                        <ul class="list-unstyled">
+                            {% if completion_rate >= 0.8 %}
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Excellent completion rate</li>
+                            {% endif %}
+                            {% if avg_energy >= 7 %}
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>High energy levels</li>
+                            {% endif %}
+                            {% if active_days >= 5 %}
+                            <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Consistent activity</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-warning">⚠ Areas for Improvement</h6>
+                        <ul class="list-unstyled">
+                            {% if completion_rate < 0.5 %}
+                            <li class="mb-1"><i class="fas fa-exclamation text-warning me-2"></i>Low completion rate - consider easier activities</li>
+                            {% endif %}
+                            {% if avg_energy < 5 %}
+                            <li class="mb-1"><i class="fas fa-exclamation text-warning me-2"></i>Low energy levels - focus on recovery</li>
+                            {% endif %}
+                            {% if active_days < 3 %}
+                            <li class="mb-1"><i class="fas fa-exclamation text-warning me-2"></i>Inconsistent activity - try shorter sessions</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h6 class="text-info">💡 Recommendations</h6>
+                        <ul class="list-unstyled">
+                            {% if completion_rate >= 0.9 and avg_energy >= 7 %}
+                            <li class="mb-1"><i class="fas fa-arrow-up text-info me-2"></i>Ready for more challenging activities</li>
+                            {% elif completion_rate < 0.6 %}
+                            <li class="mb-1"><i class="fas fa-arrow-down text-info me-2"></i>Consider reducing activity intensity</li>
+                            {% endif %}
+                            {% if avg_energy < 6 %}
+                            <li class="mb-1"><i class="fas fa-bed text-info me-2"></i>Focus on rest and recovery activities</li>
+                            {% endif %}
+                            <li class="mb-1"><i class="fas fa-calendar text-info me-2"></i>Maintain consistent daily activity</li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-lightbulb fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">Track activities to get insights</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Goals Progress -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-target me-2"></i>Goals Progress
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if weekly_stats and weekly_stats.stats %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Weekly Activity Goal</span>
+                        <span class="small">{{ weekly_stats.stats.active_days }}/7 days</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {{ (weekly_stats.stats.active_days / 7 * 100) }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small">Completion Target</span>
+                        <span class="small">{{ "%.0f"|format(weekly_stats.stats.activity_completion_rate * 100) }}%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: {{ weekly_stats.stats.activity_completion_rate * 100 }}%"></div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-target fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Set goals by tracking activities</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- No Data State -->
+    <div class="col-12">
+        <div class="text-center py-5">
+            <i class="fas fa-chart-bar fa-4x text-muted mb-4"></i>
+            <h3 class="text-muted mb-3">No Data Available</h3>
+            <p class="text-muted mb-4">Start tracking your activities to see detailed reports and analytics.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="/progress" class="btn btn-primary">
+                    <i class="fas fa-chart-bar me-1"></i>Track Progress
+                </a>
+                <a href="/plan" class="btn btn-outline-primary">
+                    <i class="fas fa-bullseye me-1"></i>Generate Plan
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Completion Trend Chart
+    const completionCtx = document.getElementById('completionTrendChart');
+    if (completionCtx) {
+        {% if chart_data and chart_data.completion_trend %}
+        const completionData = {
+            labels: [{% for item in chart_data.completion_trend %}'{{ item.date }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: [{% for item in chart_data.completion_trend %}{{ item.completion_rate }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: 'rgb(79, 70, 229)',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+        {% else %}
+        const completionData = {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: [0, 0, 0, 0, 0, 0, 0],
+                borderColor: 'rgb(79, 70, 229)',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        };
+        {% endif %}
+        
+        new Chart(completionCtx, {
+            type: 'line',
+            data: completionData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Wellness Chart
+    const wellnessCtx = document.getElementById('wellnessChart');
+    if (wellnessCtx) {
+        {% if chart_data and chart_data.energy_trend %}
+        const wellnessData = {
+            labels: [{% for item in chart_data.energy_trend %}'{{ item.date }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Energy Level',
+                data: [{% for item in chart_data.energy_trend %}{{ item.energy }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Mood Score',
+                data: [{% for item in chart_data.mood_trend %}{{ item.mood }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: 'rgb(245, 158, 11)',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                tension: 0.4,
+                fill: false
+            }]
+        };
+        {% else %}
+        const wellnessData = {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Energy Level',
+                data: [5, 6, 5, 7, 6, 8, 7],
+                borderColor: 'rgb(16, 185, 129)',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Mood Score',
+                data: [6, 7, 5, 8, 7, 9, 8],
+                borderColor: 'rgb(245, 158, 11)',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                tension: 0.4,
+                fill: false
+            }]
+        };
+        {% endif %}
+        
+        new Chart(wellnessCtx, {
+            type: 'line',
+            data: wellnessData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Time period selector
+document.querySelectorAll('[data-period]').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const period = this.dataset.period;
+        // Here you could implement AJAX to update charts for different periods
+        console.log('Selected period:', period + ' days');
+    });
+});
+</script>
+{% endblock %}

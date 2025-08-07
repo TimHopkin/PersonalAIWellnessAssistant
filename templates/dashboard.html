@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI Wellness Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Page Header -->
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="display-6 text-gradient fw-bold mb-2">
+                    <i class="fas fa-chart-line me-3"></i>Wellness Dashboard
+                </h1>
+                <p class="text-muted mb-0">Track your progress and stay motivated on your wellness journey</p>
+            </div>
+            <div class="text-end">
+                <p class="mb-0 text-muted">Today: {{ format_current_date() }}</p>
+                <p class="mb-0"><strong>{{ stats.current_streak }}</strong> day streak! 🔥</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="col-12 mb-4">
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-primary">{{ stats.completed_activities_today }}/{{ stats.total_activities_today }}</div>
+                    <div class="stat-label">Today's Activities</div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-primary" style="width: {{ (stats.completed_activities_today / stats.total_activities_today * 100) if stats.total_activities_today > 0 else 0 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="stat-number text-success">{{ "%.1f"|format(stats.weekly_completion_rate * 100) }}%</div>
+                    <div class="stat-label">Weekly Completion</div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-success" style="width: {{ stats.weekly_completion_rate * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="wellness-score {{ 'score-excellent' if stats.avg_energy_level >= 8 else 'score-good' if stats.avg_energy_level >= 6 else 'score-fair' if stats.avg_energy_level >= 4 else 'score-poor' }}">
+                        {{ "%.1f"|format(stats.avg_energy_level) }}
+                    </div>
+                    <div class="stat-label mt-2">Avg Energy Level</div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="stat-card text-center">
+                    <div class="wellness-score {{ 'score-excellent' if stats.avg_mood_score >= 8 else 'score-good' if stats.avg_mood_score >= 6 else 'score-fair' if stats.avg_mood_score >= 4 else 'score-poor' }}">
+                        {{ "%.1f"|format(stats.avg_mood_score) }}
+                    </div>
+                    <div class="stat-label mt-2">Avg Mood Score</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    {% if not stats.has_profile %}
+    <div class="col-12 mb-4">
+        <div class="alert alert-info border-0 shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-1">Get Started!</h5>
+                    <p class="mb-2">Create your profile to begin your personalized wellness journey.</p>
+                    <a href="/profile" class="btn btn-info btn-sm">
+                        <i class="fas fa-user-plus me-1"></i> Create Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif not stats.has_plan %}
+    <div class="col-12 mb-4">
+        <div class="alert alert-warning border-0 shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-bullseye fa-2x me-3"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-1">Ready for Your Plan!</h5>
+                    <p class="mb-2">Generate your personalized wellness plan to start achieving your goals.</p>
+                    <a href="/plan" class="btn btn-warning btn-sm">
+                        <i class="fas fa-magic me-1"></i> Generate Plan
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Main Content Row -->
+    <div class="col-lg-8">
+        <!-- Today's Activities -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Today's Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if plan and plan.days %}
+                    {% set today_activities = [] %}
+                    {% for day in plan.days %}
+                        {% if loop.index0 == 0 %}  {# Show first day as today for demo #}
+                            {% set today_activities = day.activities %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if today_activities %}
+                        {% for activity in today_activities %}
+                        <div class="activity-card" data-activity-id="{{ loop.index }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-{{ 'running' if activity.type == 'running' else 'dumbbell' if 'strength' in activity.type else 'leaf' if activity.type == 'yoga' else 'heart' if 'meditation' in activity.type else 'walking' }} me-2 text-primary"></i>
+                                        <h6 class="mb-0 fw-bold">{{ activity.type.replace('_', ' ').title() }}</h6>
+                                        <span class="badge badge-intensity-{{ activity.intensity }} ms-2">{{ activity.intensity }}</span>
+                                    </div>
+                                    <p class="text-muted mb-2">{{ activity.details }}</p>
+                                    <div class="d-flex align-items-center text-sm">
+                                        <i class="fas fa-clock me-1"></i>{{ activity.duration_minutes }} min
+                                        {% if activity.equipment_needed != 'none' %}
+                                        <span class="ms-3"><i class="fas fa-tools me-1"></i>{{ activity.equipment_needed }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <button class="btn btn-outline-success btn-sm me-1" onclick="markComplete({{ loop.index }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="markSkipped({{ loop.index }})">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No activities scheduled for today</h5>
+                            <a href="/plan" class="btn btn-primary">Generate Plan</a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No wellness plan yet</h5>
+                        <p class="text-muted">Create your personalized wellness plan to see daily activities.</p>
+                        <a href="/plan" class="btn btn-primary">Get Started</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Progress Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Weekly Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Upcoming Activities -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>Upcoming Activities
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if stats.upcoming_activities %}
+                    {% for activity in stats.upcoming_activities %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0 me-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-dumbbell text-white fa-sm"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ activity.summary.replace('🏃‍♂️', '').replace('🧘‍♀️', '').strip() }}</h6>
+                            <small class="text-muted">{{ activity.start_time.strftime('%I:%M %p') if activity.start_time else 'Time TBD' }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-calendar-alt fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No upcoming activities</p>
+                        <small class="text-muted">Schedule your wellness plan to see upcoming activities.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>Achievements
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 border-end">
+                        <h4 class="text-primary mb-0">{{ stats.current_streak }}</h4>
+                        <small class="text-muted">Day Streak</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">{{ "%.0f"|format(stats.weekly_completion_rate * 100) }}%</h4>
+                        <small class="text-muted">This Week</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-success">
+                        <i class="fas fa-fire me-1"></i>{{ "Active" if stats.current_streak > 0 else "Getting Started" }}
+                    </span>
+                    {% if stats.current_streak >= 7 %}
+                    <span class="badge bg-warning">
+                        <i class="fas fa-star me-1"></i>Week Champion
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Motivation -->
+        <div class="card">
+            <div class="card-body bg-gradient text-white text-center" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));">
+                <i class="fas fa-quote-left fa-2x mb-3 opacity-50"></i>
+                <blockquote class="mb-3">
+                    {% set motivational_quotes = [
+                        "Your body can do it. It's your mind you have to convince.",
+                        "The groundwork for all happiness is good health.",
+                        "Health is not about the weight you lose, but about the life you gain.",
+                        "Take care of your body. It's the only place you have to live."
+                    ] %}
+                    {{ motivational_quotes|random }}
+                </blockquote>
+                <footer class="opacity-75">
+                    <small>— Daily Motivation</small>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Tracking Modal -->
+<div class="modal fade" id="activityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Track Activity</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="activityForm">
+                    <div class="mb-3">
+                        <label class="form-label">How did it go?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" value="completed" id="completed" checked>
+                            <label class="form-check-label" for="completed">Completed</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" value="skipped" id="skipped">
+                            <label class="form-check-label" for="skipped">Skipped</label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes (optional)</label>
+                        <textarea class="form-control" id="notes" rows="3" placeholder="How did you feel? Any observations?"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="energy" class="form-label">Energy Level (1-10)</label>
+                        <input type="range" class="form-range" id="energy" min="1" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Low</small>
+                            <small class="text-muted">High</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="mood" class="form-label">Mood (1-10)</label>
+                        <input type="range" class="form-range" id="mood" min="1" max="10" value="5">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Poor</small>
+                            <small class="text-muted">Excellent</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveActivity()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentActivityId = null;
+
+// Mock data for the chart
+const chartData = {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{
+        label: 'Completion Rate (%)',
+        data: [80, 90, 75, 100, 85, 95, 88],
+        borderColor: 'rgb(79, 70, 229)',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+        tension: 0.4,
+        fill: true
+    }]
+};
+
+// Initialize chart
+const ctx = document.getElementById('progressChart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+
+function markComplete(activityId) {
+    currentActivityId = activityId;
+    document.getElementById('completed').checked = true;
+    new bootstrap.Modal(document.getElementById('activityModal')).show();
+}
+
+function markSkipped(activityId) {
+    currentActivityId = activityId;
+    document.getElementById('skipped').checked = true;
+    new bootstrap.Modal(document.getElementById('activityModal')).show();
+}
+
+function saveActivity() {
+    const form = document.getElementById('activityForm');
+    const formData = new FormData(form);
+    
+    const activityData = {
+        activity_id: currentActivityId,
+        status: formData.get('status'),
+        notes: document.getElementById('notes').value,
+        energy_level: document.getElementById('energy').value,
+        mood_score: document.getElementById('mood').value
+    };
+    
+    fetch('/track-activity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(activityData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mark the activity card as completed/skipped
+            const activityCard = document.querySelector(`[data-activity-id="${currentActivityId}"]`);
+            activityCard.classList.add(activityData.status);
+            
+            // Hide the modal
+            bootstrap.Modal.getInstance(document.getElementById('activityModal')).hide();
+            
+            // Show success message
+            showToast('Activity tracked successfully!', 'success');
+        } else {
+            showToast('Error tracking activity: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error tracking activity: ' + error.message, 'error');
+    });
+}
+
+function showToast(message, type) {
+    // Create and show a bootstrap toast
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add toast container if it doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    // Remove toast element after it's hidden
+    toastElement.addEventListener('hidden.bs.toast', () => {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}
