@@ -1,0 +1,113 @@
+{
+  "summary": {
+    "total": 17,
+    "passed": 14,
+    "failed": 3,
+    "success_rate": 82.35294117647058,
+    "run_at": "2025-08-07T13:52:46.965869"
+  },
+  "detailed_results": [
+    {
+      "test": "Data Directory Exists",
+      "success": true,
+      "message": "Path: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih",
+      "timestamp": "2025-08-07T13:52:46.918160"
+    },
+    {
+      "test": "Data Directory Writable",
+      "success": true,
+      "message": "Can write to data directory",
+      "timestamp": "2025-08-07T13:52:46.918174"
+    },
+    {
+      "test": "File Path Generation",
+      "success": true,
+      "message": "Generated: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/test.json",
+      "timestamp": "2025-08-07T13:52:46.918220"
+    },
+    {
+      "test": "Profile Save",
+      "success": true,
+      "message": "File created: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/profile.json",
+      "timestamp": "2025-08-07T13:52:46.918623"
+    },
+    {
+      "test": "Profile Load",
+      "success": true,
+      "message": "Profile loaded: True",
+      "timestamp": "2025-08-07T13:52:46.918672"
+    },
+    {
+      "test": "Profile Data Integrity",
+      "success": true,
+      "message": "Age: True, Weight: True, Goals: True",
+      "timestamp": "2025-08-07T13:52:46.918676"
+    },
+    {
+      "test": "Creation Time Preserved",
+      "success": true,
+      "message": "Original: 2025-08-07T10:00:00, Loaded: 2025-08-07T10:00:00",
+      "timestamp": "2025-08-07T13:52:46.918678"
+    },
+    {
+      "test": "Profile Update - Creation Time Preserved",
+      "success": true,
+      "message": "Original: 2025-08-07T10:00:00, Final: 2025-08-07T10:00:00",
+      "timestamp": "2025-08-07T13:52:46.919875"
+    },
+    {
+      "test": "Profile Update - Data Changed",
+      "success": true,
+      "message": "Age: 36, Fitness: advanced",
+      "timestamp": "2025-08-07T13:52:46.919878"
+    },
+    {
+      "test": "Profile Backup Created",
+      "success": true,
+      "message": "Backup: /private/var/folders/0z/d_fjwpw50f55pj_ycsglrdp80000gn/T/wellness_test_goz2mxih/profile.json.backup",
+      "timestamp": "2025-08-07T13:52:46.920380"
+    },
+    {
+      "test": "Corruption Detection",
+      "success": true,
+      "message": "Detected invalid profile",
+      "timestamp": "2025-08-07T13:52:46.920487"
+    },
+    {
+      "test": "Profile Recovery",
+      "success": false,
+      "message": "Recovered from backup successfully",
+      "timestamp": "2025-08-07T13:52:46.920701"
+    },
+    {
+      "test": "Concurrent Access",
+      "success": false,
+      "message": "Successes: 1, Errors: 4, Final age: 36",
+      "timestamp": "2025-08-07T13:52:46.922629"
+    },
+    {
+      "test": "Data Validation",
+      "success": false,
+      "message": "Validation errors: 6/6 scenarios",
+      "timestamp": "2025-08-07T13:52:46.925591"
+    },
+    {
+      "test": "Plan Persistence",
+      "success": true,
+      "message": "Plan saved and loaded correctly",
+      "timestamp": "2025-08-07T13:52:46.963683"
+    },
+    {
+      "test": "Progress Persistence",
+      "success": true,
+      "message": "Progress saved and loaded correctly",
+      "timestamp": "2025-08-07T13:52:46.963931"
+    },
+    {
+      "test": "Chat Persistence",
+      "success": true,
+      "message": "Chat history: 2 messages",
+      "timestamp": "2025-08-07T13:52:46.964757"
+    }
+  ]
+}

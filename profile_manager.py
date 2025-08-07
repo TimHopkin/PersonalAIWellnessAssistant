@@ -93,10 +93,44 @@ class ProfileManager:
         return None
     
     def save_profile(self, profile: Dict[str, Any]) -> None:
-        """Save profile to file."""
-        profile["updated_at"] = datetime.now().isoformat()
-        with open(self.profile_file, 'w') as f:
-            json.dump(profile, f, indent=2)
+        """Save profile to file with backup and error handling."""
+        try:
+            # Update timestamp
+            profile["updated_at"] = datetime.now().isoformat()
+            
+            # Create backup of existing profile if it exists
+            if self.profile_file.exists():
+                backup_file = self.profile_file.with_suffix('.json.backup')
+                import shutil
+                shutil.copy2(self.profile_file, backup_file)
+                print(f"📄 Created profile backup: {backup_file}")
+            
+            # Write to temporary file first for atomic operation
+            temp_file = self.profile_file.with_suffix('.json.tmp')
+            with open(temp_file, 'w') as f:
+                json.dump(profile, f, indent=2)
+            
+            # Verify the file was written correctly
+            with open(temp_file, 'r') as f:
+                test_load = json.load(f)
+                if not test_load.get('age') or not test_load.get('weight'):
+                    raise ValueError("Profile data appears corrupted")
+            
+            # Atomically replace the original file
+            if temp_file.exists():
+                temp_file.replace(self.profile_file)
+                print(f"✅ Profile saved successfully to: {self.profile_file}")
+            else:
+                raise FileNotFoundError("Temporary file was not created properly")
+            
+        except Exception as e:
+            print(f"❌ Error saving profile: {e}")
+            # Try to restore backup if available
+            backup_file = self.profile_file.with_suffix('.json.backup')
+            if backup_file.exists():
+                backup_file.replace(self.profile_file)
+                print(f"🔄 Restored profile from backup")
+            raise e
     
     def update_profile(self) -> Dict[str, Any]:
         """Update existing profile or create new one."""

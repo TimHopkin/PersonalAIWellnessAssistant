@@ -121,6 +121,10 @@ def profile_page():
 def save_profile():
     """Save profile data."""
     try:
+        # Load existing profile to preserve creation time and other data
+        existing_profile = profile_manager.load_profile()
+        
+        # Create new profile data
         profile_data = {
             'age': int(request.form.get('age', 0)),
             'weight': float(request.form.get('weight', 0)),
@@ -137,15 +141,42 @@ def save_profile():
                 'meditation': 'meditation' in request.form.getlist('activities'),
                 'strength_training': 'strength_training' in request.form.getlist('activities')
             },
-            'created_at': datetime.now().isoformat(),
             'updated_at': datetime.now().isoformat()
         }
         
+        # Preserve existing creation time or create new one
+        if existing_profile and existing_profile.get('created_at'):
+            profile_data['created_at'] = existing_profile['created_at']
+        else:
+            profile_data['created_at'] = datetime.now().isoformat()
+        
+        # Validate the data
+        if profile_data['age'] < 13 or profile_data['age'] > 120:
+            flash('Please enter a valid age between 13 and 120', 'error')
+            return redirect(url_for('profile_page'))
+        
+        if profile_data['weight'] < 30 or profile_data['weight'] > 300:
+            flash('Please enter a valid weight between 30 and 300 kg', 'error')
+            return redirect(url_for('profile_page'))
+        
+        if profile_data['height'] < 100 or profile_data['height'] > 250:
+            flash('Please enter a valid height between 100 and 250 cm', 'error')
+            return redirect(url_for('profile_page'))
+        
+        # Save the profile
         profile_manager.save_profile(profile_data)
         flash('Profile saved successfully!', 'success')
         
+        # Log successful save for debugging
+        print(f"✅ Profile saved successfully at {datetime.now().isoformat()}")
+        print(f"📁 Profile file location: {profile_manager.profile_file}")
+        
+    except ValueError as e:
+        flash(f'Invalid input: Please check your entries and try again', 'error')
+        print(f"❌ Profile validation error: {e}")
     except Exception as e:
         flash(f'Error saving profile: {str(e)}', 'error')
+        print(f"❌ Profile save error: {e}")
     
     return redirect(url_for('profile_page'))
 
