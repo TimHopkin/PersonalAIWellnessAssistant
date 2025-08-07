@@ -110,21 +110,29 @@ chat_manager = ChatManager()
 print("🗓️  Initializing Google Calendar integration...")
 calendar_integration.authenticate()
 
+@app.route('/test')
+def test():
+    """Simple test route."""
+    return "Flask app is working!"
+
 @app.route('/')
 def dashboard():
     """Main dashboard page."""
-    # Get current data
-    profile = profile_manager.load_profile()
-    plan = plan_generator.load_plan()
-    progress_data = progress_tracker.load_progress()
-    
-    # Calculate dashboard stats
-    dashboard_stats = calculate_dashboard_stats(profile, plan, progress_data)
-    
-    return render_template('dashboard.html', 
-                         stats=dashboard_stats,
-                         profile=profile,
-                         plan=plan)
+    try:
+        # Get current data
+        profile = profile_manager.load_profile()
+        plan = plan_generator.load_plan()
+        progress_data = progress_tracker.load_progress()
+        
+        # Calculate dashboard stats
+        dashboard_stats = calculate_dashboard_stats(profile, plan, progress_data)
+        
+        return render_template('dashboard.html', 
+                             stats=dashboard_stats,
+                             profile=profile,
+                             plan=plan)
+    except Exception as e:
+        return f"Dashboard Error: {str(e)}", 500
 
 @app.route('/profile')
 def profile_page():
